@@ -1,0 +1,29 @@
+#include <Arduino.h>
+
+// Erzwinge UART0 auf den Standard-Pins (RX0=GPIO44, TX0=GPIO43)
+void setup()
+{
+    // Falls vorher CDC aktiv war, dauert der Neustart – gib dem Chip 300 ms
+    delay(300);
+
+    // Entweder klassisch:
+    Serial.begin(115200); // mit obiger ini geht Serial => UART0
+
+    // ...oder explizit die Pins setzen (robust, falls Boards abweichen):
+    // HardwareSerial UART0(0);
+    // UART0.begin(115200, SERIAL_8N1, 44, 43);
+    // #define Serial UART0
+
+    // kleine Wartezeit, dann erste Zeilen
+    delay(50);
+    Serial.println();
+    Serial.println("[READY] ESP32-S3 UART0 @115200");
+    Serial.printf("CPU Freq: %lu MHz\n", (unsigned long)(getCpuFrequencyMhz()));
+}
+
+void loop()
+{
+    static unsigned long n = 0;
+    Serial.printf("tick %lu\n", n++);
+    delay(500);
+}

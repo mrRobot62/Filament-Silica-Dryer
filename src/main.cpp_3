@@ -1,0 +1,108 @@
+// ESP32-S3 HMI (ESP32-1732S019N) — ST7789 170x320 Offset Calibrator (no LVGL)
+#include <Arduino.h>
+#include <Arduino_GFX_Library.h>
+
+#define LCD_DC 11
+#define LCD_CS 10
+#define LCD_SCK 12
+#define LCD_MOSI 13
+#define LCD_RST 1
+#define LCD_BL 14
+
+// Test-Kandidaten (rot0/2 col,row / rot1/3 col,row)
+struct OffPair
+{
+    uint8_t c02, r02, c13, r13;
+    const char *name;
+};
+OffPair candidates[] = {
+    {35, 0, 0, 35, "A: (35,0 / 0,35)"},    // häufige Werksbelegung
+    {0, 35, 35, 0, "B: (0,35 / 35,0)"},    // vertauscht
+    {0, 0, 0, 0, "C: (0,0 / 0,0)"},        // kein Offset
+    {35, 35, 35, 35, "D: (35,35 / 35,35)"} // (seltener)
+};
+
+Arduino_DataBus *bus = new Arduino_ESP32SPI(LCD_DC, LCD_CS, LCD_SCK, LCD_MOSI, GFX_NOT_DEFINED);
+// Panel-Objekt wird dynamisch je Kandidat neu angelegt
+Arduino_GFX *gfx = nullptr;
+
+#define C_BLACK 0x0000
+#define C_WHITE 0xFFFF
+#define C_MAGENTA 0xF81F
+#define C_RED 0xF800
+#define C_GREEN 0x07E0
+#define C_BLUE 0x001F
+
+void draw_frame_with_label(const char *label)
+{
+    uint16_t W = gfx->width();  // erwartet 320
+    uint16_t H = gfx->height(); // erwartet 170
+
+    gfx->fillScreen(C_BLACK);
+
+    // 2px Magenta-Rahmen bündig rundum
+    gfx->drawRect(0, 0, W, H, C_MAGENTA);
+    gfx->drawRect(1, 1, W - 2, H - 2, C_MAGENTA);
+
+    // Kantenlinien (weiß)
+    gfx->drawFastVLine(0, 0, H, C_WHITE);
+    gfx->drawFastVLine(W - 1, 0, H, C_WHITE);
+    gfx->drawFastHLine(0, 0, W, C_WHITE);
+    gfx->drawFastHLine(0, H - 1, W, C_WHITE);
+
+    // Ecken farbig
+    gfx->drawPixel(0, 0, C_WHITE);
+    gfx->drawPixel(W - 1, 0, C_RED);
+    gfx->drawPixel(0, H - 1, C_GREEN);
+    gfx->drawPixel(W - 1, H - 1, C_BLUE);
+
+    // Label oben links
+    gfx->setTextColor(C_WHITE);
+    gfx->setTextSize(1);
+    gfx->setCursor(4, 4);
+    gfx->println(label);
+}
+
+void setup()
+{
+    Serial.begin(115200);
+    pinMode(LCD_BL, OUTPUT);
+    digitalWrite(LCD_BL, HIGH);
+}
+
+void loop()
+{
+    for (auto &p : candidates)
+    {
+        // altes Objekt ggf. löschen
+        if (gfx)
+        {
+            delete gfx;
+            gfx = nullptr;
+        }
+
+        // Panel mit Kandidat erstellen
+        gfx = new Arduino_ST7789(
+            bus, LCD_RST, 1 /* Landscape */, true /* IPS */,
+            170, 320,
+            p.c02, p.r02, // Offsets für rot0/2 (Portrait)
+            p.c13, p.r13  // Offsets für rot1/3 (Landscape)
+        );
+
+        if (!gfx->begin(40000000))
+        { // 40 MHz konservativ
+            Serial.println("gfx begin failed");
+            delay(1000);
+            continue;
+        }
+
+        gfx->setRotation(1);       // sicher Landscape
+        gfx->invertDisplay(false); // neutral
+
+        Serial.printf("Testing %s -> size %u x %u\n", p.name, gfx->width(), gfx->height());
+        draw_frame_with_label(p.name);
+
+        // 2 Sekunden beobachten
+        delay(2000);
+    }
+}

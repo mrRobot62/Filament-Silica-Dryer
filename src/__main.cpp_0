@@ -1,0 +1,84 @@
+#include <Arduino.h>
+#include <Arduino_GFX_Library.h>
+
+// --- ESP32-S3 HMI (ESP32-1732S019N) pin mapping ---
+#define LCD_DC 11
+#define LCD_CS 10
+#define LCD_SCK 12
+#define LCD_MOSI 13
+#define LCD_RST 1
+#define LCD_BL 14
+
+#define LCD_WIDTH 170
+#define LCD_HEIGHT 320
+#define COL_OFFSET 35
+#define ROW_OFFSET 0
+
+// --- SPI bus & ST7789 panel setup ---
+Arduino_DataBus *bus = new Arduino_ESP32SPI(
+    LCD_DC, LCD_CS, LCD_SCK, LCD_MOSI, GFX_NOT_DEFINED);
+Arduino_GFX *gfx = new Arduino_ST7789(
+    bus, LCD_RST, 1 /* rotation */, true /* IPS */,
+    LCD_WIDTH, LCD_HEIGHT, COL_OFFSET, ROW_OFFSET,
+    COL_OFFSET, ROW_OFFSET);
+
+void setup()
+{
+  Serial.begin(115200);
+  Serial.println("ESP32-S3 HMI Display Demo");
+
+  pinMode(LCD_BL, OUTPUT);
+  digitalWrite(LCD_BL, HIGH); // turn on backlight
+
+  if (!gfx->begin())
+  {
+    Serial.println("GFX init failed!");
+    while (true)
+      delay(100);
+  }
+
+  gfx->fillScreen(BLACK);
+  gfx->setTextColor(WHITE);
+  gfx->setTextSize(2);
+  gfx->setCursor(10, 10);
+  gfx->println("ESP32-S3 HMI");
+  gfx->setCursor(10, 35);
+  gfx->println("ST7789 170x320");
+  gfx->setCursor(10, 60);
+  gfx->println("Display Test");
+
+  delay(1000);
+
+  // Draw colored rectangles
+  uint16_t colors[] = {RED, GREEN, BLUE, YELLOW, CYAN, MAGENTA, WHITE};
+  for (uint8_t i = 0; i < 7; i++)
+  {
+    gfx->fillRect(0, i * (LCD_HEIGHT / 7), LCD_WIDTH, LCD_HEIGHT / 7, colors[i]);
+    delay(200);
+  }
+
+  gfx->invertDisplay(true);
+  delay(500);
+  gfx->invertDisplay(false);
+
+  // Draw some primitives
+  gfx->drawRect(5, 5, LCD_WIDTH - 10, LCD_HEIGHT - 10, WHITE);
+  gfx->drawLine(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1, RED);
+  gfx->drawLine(0, LCD_HEIGHT - 1, LCD_WIDTH - 1, 0, RED);
+  gfx->setCursor(20, 150);
+  gfx->setTextColor(BLACK);
+  gfx->println("Display OK!");
+}
+
+void loop()
+{
+  // Simple color fade
+  static uint16_t hue = 0;
+  uint16_t color = gfx->color565(
+      (sin(hue * 0.1) * 127 + 128),
+      (sin(hue * 0.1 + 2) * 127 + 128),
+      (sin(hue * 0.1 + 4) * 127 + 128));
+  gfx->fillRect(0, 220, LCD_WIDTH, 100, color);
+  hue++;
+  delay(20);
+}
