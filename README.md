@@ -1,5 +1,22 @@
 # Ultimativer Filament-Dryer auf basis eines Airfryers/Dörrautomaten
 
+## Die Idee - meine Anforderungen - mein Ansatz
+Für meine Filamente benötige ich eine Möglichkeit diese vor Gebrauch zu trocken. Insbesondere ASA ist empfindlich auf zu hohe Feuchtigkeit im Filament.
+Grundlegend wäre das jetzt ein einfaches einen einfachen billigen Minibackofen umzubauen. 
+Meine zweite Anforderung ist das ich Silicagel-Kugeln, die ich im Anycubic ACEPro als auch in meinem Filament-Aufbewahrungsschrank verwende regelmäßig trocken muss.
+Hier benötige ich eine Temperatur von 100-110Grad und die Freuchtigkeit muss irgendwie abtransportiert werden.
+
+Ein einfacher Mini-Backofen hat keine geeignete Abfuhr von Freuchtigkeit und die Zeiteinstellung ist häufig auch auf 1-2h begrenzt. 
+Ein Dörrapperat kann bis 8h und mehr heizen, heizt aber nur bis 80-90 Grad, zu wenig für Silicagel ausreichend für Filament.
+
+## Die Lösung
+Kombigeräte, die dörren können und gleichzeitig aber auch >100 heizen können und zusätzlich eine Grillfunktion haben (benötigt wird nur der Drehspieß).
+Auf der Suche nach geeigenten Geräten die ab ca 35° heizen und längere Zeiträume einstellen können gibt es Geräte jenseits der 100€ Grenze.
+
+**DIY** ein B-Ware Ofen suchen und umbauen.
+
+Dieses Projekt beschreibt meine Herangehensweise, die Probleme, Lösungen und zusätzliche Informationen, die ich während des Baus gewonnen habe.
+
 
 ## Zweck
 Entwicklung eines **intelligenten Filament- und Silicagel-Trockners** auf Basis eines  
@@ -19,7 +36,7 @@ Von der vorhandenen Elektronik wird lediglich das PowerBoard des Airfryers verwe
 >
 > Alles auf eigene Gefahr - Ein Stromschlag bei einer **Spannung von 230 Volt kann absolut tödlich sein**
 
-![alt text](image.png)
+![alt text](assets/image.png)
 ---
 
 ## Funktionsziele
