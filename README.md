@@ -7,7 +7,7 @@ Meine zweite Anforderung ist das ich Silicagel-Kugeln, die ich im Anycubic ACEPr
 Hier benötige ich eine Temperatur von 100-110Grad und die Freuchtigkeit muss irgendwie abtransportiert werden.
 
 Ein einfacher Mini-Backofen hat keine geeignete Abfuhr von Freuchtigkeit und die Zeiteinstellung ist häufig auch auf 1-2h begrenzt. 
-Ein Dörrapperat kann bis 8h und mehr heizen, heizt aber nur bis 80-90 Grad, zu wenig für Silicagel ausreichend für Filament.
+Ein Dörrapperat kann für einen Zeitraum >8h heizen. Leider heizen Dörrapperate aber nur bis ca. 80Grad, zu wenig für Silicagel ausreichend für Filament.
 
 ## Die Lösung
 Kombigeräte, die dörren können und gleichzeitig aber auch >100 heizen können und zusätzlich eine Grillfunktion haben (benötigt wird nur der Drehspieß).
@@ -17,6 +17,11 @@ Auf der Suche nach geeigenten Geräten die ab ca 35° heizen und längere Zeitr�
 
 Dieses Projekt beschreibt meine Herangehensweise, die Probleme, Lösungen und zusätzliche Informationen, die ich während des Baus gewonnen habe.
 
+Warum eine **Grillfunktion**. Die meisten, die Silicagel-Kugeln im Backofen trocken, schütten diese auf ein Backblech und lassen trocken, das funktioniert auch, vorausgesetzt man schüttet nicht zu viel aufs Backblech. Warum hat man einen 3D-Printer? - Ich brauche einen Pommes-Drehspieß-Korb - der war bei meiner B-Ware nicht mit dabei und die Maschen sind etwas groß für die Silicagel-Kügeln. Also einen Designen für den Drehspieß. Nun werden die Silicagel-Kugeln während der Trocknungsphase permanent bewegt und die Trockungszeit verringert sich bei höhere Trockungsmenge - Win-Win-Situation
+
+> **Gesundheitshinweis**<br>
+> Filmanent in Eurem Backofen in der Küche trocken ist keine besonders gute Idee, da die Ausdünstungen sicherlich nicht gesundheitsförderlich sind<br>
+> Silcagel-Kugeln sind ebenfalls nicht gesundheitsförderlich, wenn sie trocken und ausdünsten. 
 
 ## Zweck
 Entwicklung eines **intelligenten Filament- und Silicagel-Trockners** auf Basis eines  
@@ -29,18 +34,18 @@ kombiniert mit einer benutzerfreundlichen Bedienung über eine lokale UI (LVGL 9
 Von der vorhandenen Elektronik wird lediglich das PowerBoard des Airfryers verwendet. Die Ansteuerelektronik des Gerätes wird nicht mehr benötigt
 
 > **ACHTUNG**<br>
-> Der Umbau des Airfryers geschieht auf eigene Gefahr. Es wird mit 230V gearbeitet und kann tötlich sein.
-> Der Autor des Projektes übernimmt weder Garantie noch kann er bei Beschädigungen oder Verletzungen zur Verantwortung gezogen werden.
->
-> Arbeiten an 230V Geräten darf nur von Fachpersonal durchgeführt werden.
->
-> Alles auf eigene Gefahr - Ein Stromschlag bei einer **Spannung von 230 Volt kann absolut tödlich sein**
+> Der Umbau des Airfryers geschieht auf eigene Gefahr. Es wird mit 230V gearbeitet und das kann tötlich sein.<br>
+> Der Autor des Projektes übernimmt weder Garantie, noch kann er bei Beschädigungen oder Verletzungen zur Verantwortung gezogen werden.<br>
+><br>
+> **Arbeiten an 230V Geräten darf nur von Fachpersonal durchgeführt werden.**<br>
+><br>
+> Alles auf eigene Gefahr - Ein Stromschlag bei einer **Spannung von 230 Volt kann absolut tödlich sein**<br>
 
 ![alt text](assets/image.png)
 ---
 
 ## Funktionsziele
-- **Trocknung von 3D-Druck-Filamenten** (PLA, PETG, ABS, PA, PC, TPU usw.)
+- **Trocknung von 3D-Druck-Filamenten** Presets Filament mit Trocknungstemperatur. (PLA, PETG, ABS, PA, PC, TPU usw.)
 - **Trocknung von Silicagel-Kugeln** zur Regeneration von Trockenmitteln
 - Reproduzierbare Ergebnisse und sicherer, energieeffizienter Betrieb
 
