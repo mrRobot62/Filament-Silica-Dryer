@@ -197,7 +197,7 @@ static void all_off()
 {
     g_tpm_enabled = false;
     ssr_off();
-    digitalWrite(PIN_FAN5V, LOW);
+    digitalWrite(PIN_FAN12V, LOW);
     digitalWrite(PIN_FAN230, LOW);
     digitalWrite(PIN_FANL230, LOW);
     digitalWrite(PIN_LAMP230, LOW);
@@ -318,7 +318,7 @@ static void draw_full()
 
     // Outputs links
     draw_label_val_in_col(col, row++, F("SSR"), onoff_txt(digitalRead(PIN_SSR)), onoff_col(digitalRead(PIN_SSR)));
-    draw_label_val_in_col(col, row++, F("FAN5V"), onoff_txt(digitalRead(PIN_FAN5V)), onoff_col(digitalRead(PIN_FAN5V)));
+    draw_label_val_in_col(col, row++, F("FAN5V"), onoff_txt(digitalRead(PIN_FAN12V)), onoff_col(digitalRead(PIN_FAN12V)));
     draw_label_val_in_col(col, row++, F("FAN230"), onoff_txt(digitalRead(PIN_FAN230)), onoff_col(digitalRead(PIN_FAN230)));
     draw_label_val_in_col(col, row++, F("LAMP"), onoff_txt(digitalRead(PIN_LAMP230)), onoff_col(digitalRead(PIN_LAMP230)));
     draw_label_val_in_col(col, row++, F("MOTOR"), onoff_txt(digitalRead(PIN_MOTOR230)), onoff_col(digitalRead(PIN_MOTOR230)));
@@ -372,7 +372,7 @@ static void gfx_tick()
 
     int door = digitalRead(PIN_DOOR);
     int ssr = digitalRead(PIN_SSR);
-    int f5 = digitalRead(PIN_FAN5V);
+    int f5 = digitalRead(PIN_FAN12V);
     int f230 = digitalRead(PIN_FAN230);
     int lamp = digitalRead(PIN_LAMP230);
     int motor = digitalRead(PIN_MOTOR230);
@@ -443,7 +443,7 @@ static void print_stat()
     Serial.println(F("\n--- System Status ---"));
     Serial.printf("Door : %s\n", (digitalRead(PIN_DOOR) == LOW) ? "CLOSED (LOW)" : "OPEN (HIGH)");
     Serial.printf("SSR  : %s\n", onoff_txt(digitalRead(PIN_SSR)));
-    Serial.printf("FAN5V: %s\n", onoff_txt(digitalRead(PIN_FAN5V)));
+    Serial.printf("FAN5V: %s\n", onoff_txt(digitalRead(PIN_FAN12V)));
     Serial.printf("FAN230: %s\n", onoff_txt(digitalRead(PIN_FAN230)));
     Serial.printf("LAMP : %s\n", onoff_txt(digitalRead(PIN_LAMP230)));
     Serial.printf("MOTOR: %s\n", onoff_txt(digitalRead(PIN_MOTOR230)));
@@ -604,7 +604,7 @@ static void parse_line(String s)
     }
     else if (cmd == "fan5")
     {
-        digitalWrite(PIN_FAN5V, (a1 == "on") ? HIGH : LOW);
+        digitalWrite(PIN_FAN12V, (a1 == "on") ? HIGH : LOW);
         Serial.printf("fan5V %s\n", a1.c_str());
     }
     else if (cmd == "fan230")
@@ -649,9 +649,9 @@ static void parse_line(String s)
         }
         else if (a1 == "fan5")
         {
-            digitalWrite(PIN_FAN5V, HIGH);
+            digitalWrite(PIN_FAN12V, HIGH);
             delay(ms);
-            digitalWrite(PIN_FAN5V, LOW);
+            digitalWrite(PIN_FAN12V, LOW);
         }
         else if (a1 == "fan230")
         {
@@ -735,8 +735,8 @@ void setup()
     // Safe outputs
     pinMode(PIN_SSR, OUTPUT);
     digitalWrite(PIN_SSR, LOW);
-    pinMode(PIN_FAN5V, OUTPUT);
-    digitalWrite(PIN_FAN5V, LOW);
+    pinMode(PIN_FAN12V, OUTPUT);
+    digitalWrite(PIN_FAN12V, LOW);
     pinMode(PIN_FAN230, OUTPUT);
     digitalWrite(PIN_FAN230, LOW);
     pinMode(PIN_LAMP230, OUTPUT);

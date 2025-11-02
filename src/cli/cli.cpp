@@ -90,7 +90,7 @@ static void all_off()
 {
     g_tpm_enabled = false;
     ssr_off();
-    digitalWrite(PIN_FAN5V, LOW);
+    digitalWrite(PIN_FAN12V, LOW);
     digitalWrite(PIN_FAN230, LOW);
     digitalWrite(PIN_FANL230, LOW);
     digitalWrite(PIN_LAMP230, LOW);
@@ -180,7 +180,7 @@ static void print_stat()
                   g_tpm_enabled ? "ENABLED" : "DISABLED");
 
     Serial.println(F("Outputs:"));
-    Serial.printf("  FAN5V (P5):   %s\n", onoff(digitalRead(PIN_FAN5V)));
+    Serial.printf("  FAN5V (P5):   %s\n", onoff(digitalRead(PIN_FAN12V)));
     Serial.printf("  FAN230 (P7):  %s\n", onoff(digitalRead(PIN_FAN230)));
     Serial.printf("  LAMP  (P8):   %s\n", onoff(digitalRead(PIN_LAMP230)));
     Serial.printf("  MOTOR (P9):   %s\n", onoff(digitalRead(PIN_MOTOR230)));
@@ -230,7 +230,7 @@ static void cmd_pulse(const String &tgt, uint32_t ms)
         pulse(PIN_SSR);
     }
     else if (tgt == "fan5")
-        pulse(PIN_FAN5V);
+        pulse(PIN_FAN12V);
     else if (tgt == "fan230")
         pulse(PIN_FAN230);
     else if (tgt == "fanl")
@@ -402,7 +402,7 @@ static void parse_line(String s)
     }
     else if (cmd == "fan5")
     {
-        digitalWrite(PIN_FAN5V, (a1 == "on") ? HIGH : LOW);
+        digitalWrite(PIN_FAN12V, (a1 == "on") ? HIGH : LOW);
         Serial.printf("fan5V %s\n", a1.c_str());
     }
     else if (cmd == "fan230")
@@ -471,8 +471,8 @@ void setup()
     // Safe IO defaults
     pinMode(PIN_SSR, OUTPUT);
     digitalWrite(PIN_SSR, LOW);
-    pinMode(PIN_FAN5V, OUTPUT);
-    digitalWrite(PIN_FAN5V, LOW);
+    pinMode(PIN_FAN12V, OUTPUT);
+    digitalWrite(PIN_FAN12V, LOW);
     pinMode(PIN_FAN230, OUTPUT);
     digitalWrite(PIN_FAN230, LOW);
     pinMode(PIN_FANL230, OUTPUT);

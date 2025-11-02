@@ -1,0 +1,129 @@
+[platformio]
+default_envs = main
+
+[common]
+platform  = https://github.com/pioarduino/platform-espressif32/releases/download/51.03.07/platform-espressif32.zip
+board     = esp32-s3-devkitc-1
+framework = arduino
+
+board_build.flash_size = 16MB
+board_build.psram      = enabled
+monitor_speed   = 115200
+monitor_filters = direct, time
+monitor_rts     = 0
+monitor_dtr     = 0
+
+; Flags, die wirklich in beiden Envs gleich sind
+common_build_flags =
+  -DARDUINO_USB_MODE=0
+  -DARDUINO_USB_CDC_ON_BOOT=0
+  -DCORE_DEBUG_LEVEL=0
+  -mfix-esp32-psram-cache-issue
+
+; -------- Hauptprogramm mit LVGL --------
+[env:main]
+platform        = ${common.platform}
+board           = ${common.board}
+framework       = ${common.framework}
+board_build.flash_size = ${common.board_build.flash_size}
+board_build.psram      = ${common.board_build.psram}
+monitor_speed   = ${common.monitor_speed}
+monitor_filters = ${common.monitor_filters}
+monitor_rts     = ${common.monitor_rts}
+monitor_dtr     = ${common.monitor_dtr}
+build_flags =
+  ${common.common_build_flags}
+  -DLV_CONF_INCLUDE_SIMPLE         ; du hast LVGL wirklich im Einsatz
+  -DLV_USE_TABVIEW=1
+  -DLV_USE_CHART=1
+  -DLV_USE_SLIDER=1
+  -DLV_USE_SWITCH=1
+  -DLV_USE_BTN=1
+  -DLV_USE_LABEL=1
+  -DLV_USE_BAR=1
+  -DLV_USE_ARC=1
+lib_deps =
+  lvgl/lvgl@^9.4.0
+  moononournation/GFX Library for Arduino@1.5.0
+  adafruit/Adafruit MAX31856 library@^1.2.8
+; nur deinen Main-Code bauen (siehe deine Filter-Variante)
+build_src_filter = -<*> +<main/**>
+
+; -------- CLI-Test ohne LVGL --------
+[env:cli]
+platform        = ${common.platform}
+board           = ${common.board}
+framework       = ${common.framework}
+board_build.flash_size = ${common.board_build.flash_size}
+board_build.psram      = ${common.board_build.psram}
+monitor_speed   = ${common.monitor_speed}
+monitor_filters = ${common.monitor_filters}
+monitor_rts     = ${common.monitor_rts}
+monitor_dtr     = ${common.monitor_dtr}
+build_flags =
+  ${common.common_build_flags}
+  -DLV_CONF_SKIP=1                 ; sag LVGL explizit ab, falls irgendwo inkludiert
+lib_deps =
+  adafruit/Adafruit MAX31856 library@^1.2.8
+; nur den CLI-Code bauen
+build_src_filter = -<*> +<cli/**>
+
+
+; -------- CLI-GFX-Test --------
+[env:cli_gfx]
+platform        = ${common.platform}
+board           = ${common.board}
+framework       = ${common.framework}
+board_build.flash_size = ${common.board_build.flash_size}
+board_build.psram      = ${common.board_build.psram}
+monitor_speed   = ${common.monitor_speed}
+monitor_filters = ${common.monitor_filters}
+monitor_rts     = ${common.monitor_rts}
+monitor_dtr     = ${common.monitor_dtr}
+build_flags =
+  ${common.common_build_flags}
+  -DLV_CONF_SKIP=1                 ; sag LVGL explizit ab, falls irgendwo inkludiert
+  -DTEST_ROTARY
+
+lib_deps =
+  mathertel/RotaryEncoder@^1.5.3
+  Wire
+  Adafruit BusIO
+  Adafruit MAX31856 library
+  moononournation/GFX Library for Arduino@^1.5.0
+; Alles andere (Thermo etc.) NICHT bauen
+; -> kompiliere NUR die Rotary- und GFX-Dateien
+src_filter =
+  -<*>
+  +<cli_gfx/cli_gfx.cpp>
+  +<cli_gfx/RotarySwitch.cpp>
+  +<cli_gfx/rotary_input.cpp>
+  +<cli_gfx/gfx_ui.cpp>
+
+  
+[env:test_enc]
+platform        = ${common.platform}
+board           = ${common.board}
+framework       = ${common.framework}
+board_build.flash_size = ${common.board_build.flash_size}
+board_build.psram      = ${common.board_build.psram}
+monitor_speed   = ${common.monitor_speed}
+monitor_filters = ${common.monitor_filters}
+monitor_rts     = ${common.monitor_rts}
+monitor_dtr     = ${common.monitor_dtr}
+build_flags =
+  ${common.common_build_flags}
+  -DLV_CONF_SKIP=1                 ; sag LVGL explizit ab, falls irgendwo inkludiert
+
+; Nur das, was wir wirklich brauchen:
+lib_deps =
+  mathertel/RotaryEncoder@^1.5.3
+
+; Alles, was "Wire.h" indirekt reinzieht, ignorieren:
+lib_ignore =
+  Adafruit BusIO
+  Adafruit MAX31856 library
+  lvgl
+  lvgl/lvgl
+
+build_src_filter = -<*> +<test_enc/**>

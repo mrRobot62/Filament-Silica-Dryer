@@ -1,6 +1,7 @@
 #pragma once
 #include <Arduino.h>
 #include "status.h" // <-- hier kommt SystemStatus her
+#include "RotarySwitch.h"
 
 // Pins werden in cli_gfx.cpp via #define festgelegt.
 
@@ -12,7 +13,7 @@ void control_tick(SystemStatus &out);
 void control_set_ssr(bool on);
 void control_enable_tpm(float duty_0_1);
 void control_set_tpm_window_ms(uint32_t ms);
-void control_set_fan5(bool on);
+void control_set_fan12(bool on);
 void control_set_fan230(bool on);
 void control_set_fanl(bool on);
 void control_set_lamp(bool on);

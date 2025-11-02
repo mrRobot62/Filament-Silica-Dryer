@@ -37,8 +37,8 @@ static void hw_init()
 {
   pinMode(PIN_SSR, OUTPUT);
   digitalWrite(PIN_SSR, LOW);
-  pinMode(PIN_FAN5V, OUTPUT);
-  digitalWrite(PIN_FAN5V, LOW);
+  pinMode(PIN_FAN12V, OUTPUT);
+  digitalWrite(PIN_FAN12V, LOW);
   pinMode(PIN_FAN230, OUTPUT);
   digitalWrite(PIN_FAN230, LOW);
   pinMode(PIN_LAMP230, OUTPUT);
