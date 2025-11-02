@@ -6,20 +6,20 @@
 
 ## Powerboard – Anschluss P1–P12
 
-|   Pin   | Bezeichnung | Typ / Richtung                 | Signalpfad (vereinfacht)                              | Beschreibung / Funktion                                                                |
-| :-----: | :---------- | :----------------------------- | :---------------------------------------------------- | :------------------------------------------------------------------------------------- |
-| **P1**  | TEMP        | Eingang (analog)               | → Spannungsteiler → ADC des MCU-Boards                | Anschluss des NTC-Temperatursensors. Spannung sinkt bei steigender Temperatur.         |
-| **P2**  | +5 V        | Ausgang (DC)                   | ← 7805 / Sekundärnetzteil                             | Haupt-Versorgungsspannung für Steuerboard, Sensoren und Logik.                         |
-| **P3**  | GND         | Bezugspotential                | ← Sekundär-GND                                        | Masse aller Logik- und Sensorkreise (galvanisch getrennt von Netz).                    |
-| **P4**  | NC          | –                              | –                                                     | Nicht belegt (möglicherweise Reserveleitung).                                          |
-| **P5**  | FAN 5V      | Ausgang (digital)              | → Transistor Q5 → Lüfter 5 V                          | Schaltbarer 5 V-Ausgang für internen kleinen Lüfter. Wird vom MCU über GPIO aktiviert. |
-| **P6**  | HEATER REL  | Ausgang (digital, low-aktiv)   | → Transistor Q7 → Relais-Spule → Heizwiderstand 230 V | Steuert das Heizungsrelais. Aktiv solange Solltemperatur nicht erreicht ist.           |
-| **P7**  | FAN 230V    | Ausgang (digital, Optokoppler) | → Q8 → PD1 → Q1 (Triac) → 230 V-Lüfter                | Schaltet den großen Lüfter (Netzspannung). Galvanisch getrennt über Optokoppler/Triac. |
-| **P8**  | LAMP 230V   | Ausgang (digital, Optokoppler) | → Q9 → PD2 → Q2 (Triac) → 230 V-Lampe                 | Schaltet Innenbeleuchtung oder Heizraumlampe.                                          |
-| **P9**  | MOTOR 230V  | Ausgang (digital, Optokoppler) | → Q10 → PD3 → Q3 (Triac) → 230 V-Motor                | Schaltet den Antriebsmotor (z. B. Lüfterrad oder Drehantrieb).                         |
-| **P10** | FAN-L 230V  | Ausgang (digital, Optokoppler) | → Q11 → PD4 → Q4 (Triac) → 230 V-Sekundärlüfter       | Zweiter 230 V-Lüfter, z. B. Luftzirkulation oder Abluft.                               |
-| **P11** | NC          | –                              | –                                                     | Nicht belegt (möglicherweise Test- oder Reservepin).                                   |
-| **P12** | DOOR        | Eingang (digital)              | → Pull-Up → Türschalter (nach GND)                    | Türkontakt. Aktiv LOW, zieht auf Masse wenn Tür geschlossen.                           |
+|   Pin   | Bezeichnung | Typ / Richtung                 | Signalpfad (vereinfacht)                              | Beschreibung / Funktion                                                                                                               |
+| :-----: | :---------- | :----------------------------- | :---------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------ |
+| **P1**  | TEMP        | Eingang (analog)               | → Spannungsteiler → ADC des MCU-Boards                | Anschluss des NTC-Temperatursensors. Spannung sinkt bei steigender Temperatur.<br>P1-R12-NTC-5V                                       |
+| **P2**  | +5 V        | Ausgang (DC)                   | ← 7805 / Sekundärnetzteil                             | Haupt-Versorgungsspannung für Steuerboard, Sensoren und Logik.                                                                        |
+| **P3**  | GND         | Bezugspotential                | ← Sekundär-GND                                        | Masse aller Logik- und Sensorkreise (galvanisch getrennt von Netz).                                                                   |
+| **P4**  | NC          | –                              | –                                                     | Nicht belegt (möglicherweise Reserveleitung).                                                                                         |
+| **P5**  | FAN12V      | Eingang (digital)              | → Transistor Q10 → Lüfter 12V                         | Vermutung: wird geprüft ob der Kühllüfter läuft. Lüfter liegt an Basis von Q10<br>R16-Kollector(Q10)-Basis(10)-12VLüfter-Emitter(GND) |
+| **P6**  | HEATER REL  | Ausgang (digital, low-aktiv)   | → Transistor Q7 → Relais-Spule → Heizwiderstand 230 V | Steuert das Heizungsrelais. Aktiv solange Solltemperatur nicht erreicht ist.                                                          |
+| **P7**  | FAN 230V    | Ausgang (digital, Optokoppler) | → Q8 → PD1 → Q1 (Triac) → 230 V-Lüfter                | Fan & fan-l gehen an den Spaltmotor und schalten den Lüfter inkl. rotes Kabel                                                         |
+| **P8**  | LAMP 230V   | Ausgang (digital, Optokoppler) | → Q9 → PD2 → Q2 (Triac) → 230 V-Lampe                 | Schaltet Innenbeleuchtung oder Heizraumlampe.                                                                                         |
+| **P9**  | MOTOR 230V  | Ausgang (digital, Optokoppler) | → Q10 → PD3 → Q3 (Triac) → 230 V-Motor                | Schaltet den Antriebsmotor Drehspieß                                                                                                  |
+| **P10** | FAN-L 230V  | Ausgang (digital, Optokoppler) | → Q11 → PD4 → Q4 (Triac) → 230 V-Sekundärlüfter       | FAN & FAN-L Lüfter, schwarzes Kabel.                                                                                                  |
+| **P11** | NC          | –                              | –                                                     | Nicht belegt (Liegt aber 5V permanent an über Logic-Board)                                                                            |
+| **P12** | DOOR        | Eingang (digital)              | → Pull-Up → Türschalter (nach GND)                    | Türkontakt. Aktiv LOW, zieht auf Masse wenn Tür geschlossen.                                                                          |
 
 ## 🧩 Ergänzende Hinweise
 - Messreferenz:

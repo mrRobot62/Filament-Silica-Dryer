@@ -1,0 +1,296 @@
+#include "control.h"
+#include <Adafruit_MAX31856.h>
+#include <ESP32Encoder.h>
+#include "driver/gpio.h"
+
+// ---------- Pins (kommen aus cli_gfx.cpp als #define) ----------
+extern "C"
+{
+    extern const int PIN_SSR;
+    extern const int PIN_FAN5V;
+    extern const int PIN_FAN230;
+    extern const int PIN_FANL230;
+    extern const int PIN_LAMP230;
+    extern const int PIN_MOTOR230;
+    extern const int PIN_DOOR;
+
+    extern const int PIN_ENC_A;
+    extern const int PIN_ENC_B;
+    extern const int PIN_ENC_SW;
+
+    extern const int PIN_TC_SCK;
+    extern const int PIN_TC_MISO;
+    extern const int PIN_TC_MOSI;
+    extern const int PIN_TC_CS;
+}
+
+// ---------- Thermo ----------
+static Adafruit_MAX31856 s_thermo(PIN_TC_CS, PIN_TC_MOSI, PIN_TC_MISO, PIN_TC_SCK);
+static bool s_thermo_ok = false;
+
+// ---------- Encoder via PCNT ----------
+static ESP32Encoder s_encoder;
+static long s_last_reported = 0; // für Richtungsableitung
+
+// optional: Schritte pro Rastung deines Encoders (meist 2 oder 4)
+// für “pro Rastung +1/-1” kannst du dividieren. Hier lassen wir rohe Zählung:
+static const int ENC_STEPS_PER_DETENT = 1; // ggf. auf 2 oder 4 setzen
+static volatile int8_t s_last_dir = 0;    // +1/-1, aus ISR sichtbar
+
+// ---------- Switch (Push) ----------
+static volatile bool s_sw_on = false;
+static volatile bool s_sw_changed = false;
+static int s_sw_idle_level = 1;
+
+static void IRAM_ATTR isr_switch()
+{
+    int lvl = gpio_get_level((gpio_num_t)PIN_ENC_SW);
+    bool nowOn = (lvl != s_sw_idle_level); // gedrückt = vom Idle-Level verschieden
+    if (nowOn != s_sw_on)
+    {
+        s_sw_on = nowOn;
+        s_sw_changed = true;
+    }
+}
+
+// ---------- SSR TPM ----------
+static bool s_tpm_enabled = false;
+static float s_ssr_duty = 0.0f; // 0..1
+static uint32_t s_tpm_window_ms = 1000;
+static uint32_t s_window_start_ms = 0;
+
+static inline int door_read() { return digitalRead(PIN_DOOR); } // HIGH=open
+static inline void ssr_on() { digitalWrite(PIN_SSR, HIGH); }
+static inline void ssr_off() { digitalWrite(PIN_SSR, LOW); }
+
+static void apply_ssr_tpm()
+{
+    if (!s_tpm_enabled)
+        return;
+    if (door_read() == HIGH)
+    {
+        ssr_off();
+        return;
+    } // Tür offen blockiert
+
+    const uint32_t now = millis();
+    uint32_t elapsed = now - s_window_start_ms;
+
+    if (elapsed >= s_tpm_window_ms)
+    {
+        s_window_start_ms = now;
+        elapsed = 0;
+        if (s_ssr_duty > 0.0f)
+            ssr_on();
+        else
+            ssr_off();
+    }
+    const uint32_t on_ms = (uint32_t)(s_ssr_duty * s_tpm_window_ms);
+    if (elapsed >= on_ms)
+        ssr_off();
+}
+
+// ---------- Helpers ----------
+static inline const char *onoff_txt(int state) { return (state == HIGH) ? "ON" : "OFF"; }
+
+// ---------- Public API ----------
+void control_init()
+{
+    // Sicherer Ausgangszustand
+    pinMode(PIN_SSR, OUTPUT);
+    digitalWrite(PIN_SSR, LOW);
+    pinMode(PIN_FAN5V, OUTPUT);
+    digitalWrite(PIN_FAN5V, LOW);
+    pinMode(PIN_FAN230, OUTPUT);
+    digitalWrite(PIN_FAN230, LOW);
+    pinMode(PIN_FANL230, OUTPUT);
+    digitalWrite(PIN_FANL230, LOW);
+    pinMode(PIN_LAMP230, OUTPUT);
+    digitalWrite(PIN_LAMP230, LOW);
+    pinMode(PIN_MOTOR230, OUTPUT);
+    digitalWrite(PIN_MOTOR230, LOW);
+    pinMode(PIN_DOOR, INPUT_PULLUP);
+
+    // Encoder via PCNT (ESP32Encoder)
+    // interne Pullups nutzen (Encoder muss mechanisch entprellt sein)
+    ESP32Encoder::useInternalWeakPullResistors = UP;
+    // Halb-Quadratur: pulsiere auf A, Richtung über B; liefert stabile Zählung
+    s_encoder.attachHalfQuad(PIN_ENC_A, PIN_ENC_B);
+    s_encoder.clearCount();
+    // Glitch-Filter (0..1023) – unter der Haube PCNT Filter, ~1-2 ms sinnvoll
+    s_encoder.setFilter(1000);
+
+    // Switch
+    pinMode(PIN_ENC_SW, INPUT_PULLUP);
+    gpio_pullup_en((gpio_num_t)PIN_ENC_SW);
+    delayMicroseconds(50);
+    s_sw_idle_level = gpio_get_level((gpio_num_t)PIN_ENC_SW);
+    s_sw_on = (gpio_get_level((gpio_num_t)PIN_ENC_SW) != s_sw_idle_level);
+    attachInterrupt(digitalPinToInterrupt(PIN_ENC_SW), isr_switch, CHANGE);
+
+    // Thermo
+    s_thermo_ok = s_thermo.begin();
+    if (s_thermo_ok)
+    {
+        s_thermo.setThermocoupleType(MAX31856_TCTYPE_K);
+        s_thermo.setNoiseFilter(MAX31856_NOISE_FILTER_50HZ);
+    }
+
+    s_window_start_ms = millis();
+}
+
+void control_tick(SystemStatus &out)
+{
+    // TPM
+    apply_ssr_tpm();
+
+    // Encoder lesen
+    long raw = s_encoder.getCount();
+    // evtl. pro Rastung normalisieren:
+    long enc = (ENC_STEPS_PER_DETENT > 1) ? (raw / ENC_STEPS_PER_DETENT) : raw;
+
+    long delta = enc - s_last_reported;
+    if (delta > 0)
+        s_last_dir = +1;
+    else if (delta < 0)
+        s_last_dir = -1;
+    // else behalten wir s_last_dir wie er ist (0, wenn nie bewegt)
+
+    s_last_reported = enc;
+
+    // Status füllen
+    out.door_low = (digitalRead(PIN_DOOR) == LOW);
+    out.ssr_on = (digitalRead(PIN_SSR) == HIGH);
+    out.fan5_on = (digitalRead(PIN_FAN5V) == HIGH);
+    out.fan230_on = (digitalRead(PIN_FAN230) == HIGH);
+    out.fanl_on = (digitalRead(PIN_FANL230) == HIGH);
+    out.lamp_on = (digitalRead(PIN_LAMP230) == HIGH);
+    out.motor_on = (digitalRead(PIN_MOTOR230) == HIGH);
+
+    out.enc_count = enc;
+    out.enc_last_dir = s_last_dir;
+    out.sw_on = s_sw_on;
+
+    out.thermo_ok = s_thermo_ok;
+    if (s_thermo_ok)
+    {
+        out.tc = s_thermo.readThermocoupleTemperature();
+        out.cj = s_thermo.readCJTemperature();
+    }
+    else
+    {
+        out.tc = NAN;
+        out.cj = NAN;
+    }
+}
+
+SystemStatus control_snapshot()
+{
+    SystemStatus s{};
+    control_tick(s);
+    return s;
+}
+
+// ---- Aktorsteuerungen ----
+void control_set_ssr(bool on)
+{
+    if (door_read() == HIGH && on)
+    { // Sicherheit: Tür offen → block
+        ssr_off();
+        s_tpm_enabled = false;
+        return;
+    }
+    s_tpm_enabled = false;
+    digitalWrite(PIN_SSR, on ? HIGH : LOW);
+}
+void control_enable_tpm(float duty_0_1)
+{
+    if (duty_0_1 < 0)
+        duty_0_1 = 0;
+    if (duty_0_1 > 1)
+        duty_0_1 = 1;
+    if (door_read() == HIGH && duty_0_1 > 0)
+    {
+        s_tpm_enabled = false;
+        ssr_off();
+        return;
+    }
+    s_ssr_duty = duty_0_1;
+    s_tpm_enabled = true;
+    s_window_start_ms = millis();
+}
+void control_set_tpm_window_ms(uint32_t ms)
+{
+    if (ms < 200)
+        ms = 200;
+    if (ms > 5000)
+        ms = 5000;
+    s_tpm_window_ms = ms;
+}
+
+void control_set_fan5(bool on) { digitalWrite(PIN_FAN5V, on ? HIGH : LOW); }
+void control_set_fan230(bool on) { digitalWrite(PIN_FAN230, on ? HIGH : LOW); }
+void control_set_fanl(bool on) { digitalWrite(PIN_FANL230, on ? HIGH : LOW); }
+void control_set_lamp(bool on) { digitalWrite(PIN_LAMP230, on ? HIGH : LOW); }
+void control_set_motor(bool on) { digitalWrite(PIN_MOTOR230, on ? HIGH : LOW); }
+
+void control_pulse(const String &tgt, uint32_t ms)
+{
+    if (ms < 10)
+        ms = 10;
+    if (ms > 5000)
+        ms = 5000;
+
+    auto pulse = [&](int pin)
+    { digitalWrite(pin, HIGH); delay(ms); digitalWrite(pin, LOW); };
+
+    if (tgt == "ssr")
+    {
+        if (door_read() == HIGH)
+            return;
+        pulse(PIN_SSR);
+    }
+    else if (tgt == "fan5")
+        pulse(PIN_FAN5V);
+    else if (tgt == "fan230")
+        pulse(PIN_FAN230);
+    else if (tgt == "fanl")
+        pulse(PIN_FANL230);
+    else if (tgt == "lamp")
+        pulse(PIN_LAMP230);
+    else if (tgt == "motor")
+        pulse(PIN_MOTOR230);
+}
+
+void control_all_off()
+{
+    s_tpm_enabled = false;
+    ssr_off();
+    digitalWrite(PIN_FAN5V, LOW);
+    digitalWrite(PIN_FAN230, LOW);
+    digitalWrite(PIN_FANL230, LOW);
+    digitalWrite(PIN_LAMP230, LOW);
+    digitalWrite(PIN_MOTOR230, LOW);
+}
+
+// --- Encoder: Reset API ---
+void control_enc_reset()
+{
+    // Falls du unsere internen Variablennamen aus dem letzten Stand nutzt:
+    // s_enc_count = gesamter Zähler (sichtbar im Status)
+    // s_enc_accum = per-Quadratur-Akkumulator / temporär
+    // s_last_dir  = letzte Richtung (+1 / -1 / 0)
+
+    extern volatile long s_enc_count;
+    //extern volatile int8_t s_last_dir;
+
+    // Wenn du zusätzlich einen Akkumulator/Filter benutzt, hier ebenfalls zurücksetzen.
+    // Falls nicht vorhanden, diese Zeile einfach weglassen oder anpassen:
+    // extern volatile long s_enc_accum;
+
+    noInterrupts();
+    s_enc_count = 0;
+    s_last_dir = 0;
+    // s_enc_accum = 0; // ggf. einkommentieren, falls es die Variable gibt
+    interrupts();
+}
