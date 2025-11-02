@@ -254,7 +254,7 @@ void loop()
     else
     {
         Serial.println("Switch: OFF (0)");
-    }   
+    }
     // Mini-CLI
     while (Serial.available())
     {

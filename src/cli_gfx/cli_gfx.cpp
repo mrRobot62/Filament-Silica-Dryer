@@ -28,12 +28,13 @@ static void uiInit()
 {
     gfx_begin();
     gfx_show(NAN, /*fan12v*/ false, /*heater*/ false, /*fan230*/ false, /*motor*/ false, /*fault*/ 0);
-    gfx_log("Rotary test ready");
+    gfx_footer(0, "RELEASED");
 }
 
 static void testRotary()
 {
     static uint32_t lastPrint = 0;
+    static long clicks = 0;
     RotaryEvent ev{};
 
     if (gRotInput.poll(ev))
@@ -41,27 +42,33 @@ static void testRotary()
         if (ev.moved)
         {
             String msg = String("Moved: ") + ev.delta + " | Pos: " + ev.newPosition;
-            gfx_log(msg.c_str());
             Serial.println(msg);
+
+            clicks += ev.delta;     // kumulative Klicks
+            gfx_footer(clicks, ""); // Button-Status bleibt, nur Zähler aktualisieren
         }
         if (ev.evPressed)
         {
-            gfx_log("Button: PRESS");
+            // gfx_log("Button: PRESS");
+            gfx_footer(clicks, "PRESSED");
             Serial.println(F("Button: PRESS"));
         }
         if (ev.evReleased)
         {
-            gfx_log("Button: RELEASE");
+            // gfx_log("Button: RELEASE");
+            gfx_footer(clicks, "RELEASED");
             Serial.println(F("Button: RELEASE"));
         }
         if (ev.evDoubleClick)
         {
-            gfx_log("Button: DOUBLE");
+            // gfx_log("Button: DOUBLE");
+            gfx_footer(clicks, "DOUBLE");
             Serial.println(F("Button: DOUBLE"));
         }
         if (ev.evLongClick)
         {
-            gfx_log("Button: LONG");
+            // gfx_log("Button: LONG");
+            gfx_footer(clicks, "LONG");
             Serial.println(F("Button: LONG"));
         }
     }

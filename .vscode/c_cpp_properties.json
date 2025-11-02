@@ -612,6 +612,7 @@
                 "ARDUINO_RUNNING_CORE=1",
                 "ARDUINO_EVENT_RUNNING_CORE=1",
                 "CORE_DEBUG_LEVEL=0",
+                "TEST_ROTARY",
                 "LV_CONF_SKIP=1",
                 "ESP32_ARDUINO_LIB_BUILDER",
                 "ESP_PLATFORM",

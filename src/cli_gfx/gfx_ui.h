@@ -1,20 +1,17 @@
 #pragma once
 #include <Arduino.h>
 
-// Tiny GFX UI for temporary CLI_GFX app.
-// No dependency on SystemStatus to keep things simple.
-//
-// API:
-//   gfx_begin();
-//   gfx_show(tempC, fan12v, heaterOn, fan230On, motorOn, fault=0);
-//   gfx_log("text");
-//
-void gfx_begin();
-void gfx_log(const char* line);
-void gfx_show(float tempC, bool fan12v, bool heaterOn, bool fan230On, bool motorOn, int fault = 0);
+// Flackerfreie, simple STATUS-UI (zweispaltig) mit Footer (Encoder/BTN).
+// Statisches Layout wird einmal gezeichnet; danach werden NUR Wertebereiche
+// als kleine Rechtecke neu gefüllt + Text geschrieben (kein Screen-Blinken).
 
-// Backward-compat for existing code calling old names:
-inline void gfxui_log(const char* line) { gfx_log(line); }
-inline void gfxui_showStatus(float tempC, bool fan12v, bool heaterOn, bool fan230On, bool motorOn) {
-    gfx_show(tempC, fan12v, heaterOn, fan230On, motorOn, /*fault=*/0);
+void gfx_begin();
+void gfx_show(float tempC, bool fan12v, bool heaterOn, bool fan230On, bool motorOn, int fault = 0);
+void gfx_footer(int32_t encoderClicks, const char *buttonState);
+
+// Legacy-Shims
+inline void gfxui_log(const char * /*line*/) {}
+inline void gfxui_showStatus(float t, bool f12, bool h, bool f230, bool m)
+{
+    gfx_show(t, f12, h, f230, m, 0);
 }
