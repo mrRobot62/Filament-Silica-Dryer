@@ -11,8 +11,8 @@ static float readThermoC_Fake()
     return t;
 }
 
-Sensors::Sensors(uint8_t pinFan12vSense, uint8_t pinHeater, uint8_t pinFan230, uint8_t pinMotor)
-    : pinFan12vSense_(pinFan12vSense), pinHeater_(pinHeater), pinFan230_(pinFan230), pinMotor_(pinMotor) {}
+Sensors::Sensors(uint8_t pinFan12vSense, uint8_t pinHeater, uint8_t pinFan230, uint8_t pinMotor, uint8_t pinDoor)
+    : pinFan12vSense_(pinFan12vSense), pinHeater_(pinHeater), pinFan230_(pinFan230), pinMotor_(pinMotor), pinDoor_(pinDoor) {}
 
 void Sensors::begin()
 {
@@ -35,6 +35,13 @@ float Sensors::readTempImpl_()
 float Sensors::readTemperatureC()
 {
     return readTempImpl_(); // NAN on failure in real impl
+}
+
+bool Sensors::readDoorOpen()
+{
+    int v = digitalRead(pinDoor_);
+    doorOpen_ = (v == HIGH);
+    return doorOpen_;
 }
 
 bool Sensors::readFan12vRunning()
@@ -72,5 +79,6 @@ SensorSnapshot Sensors::snapshot()
     s.heaterOn = heaterOn_;
     s.fan230On = fan230On_;
     s.motorOn = motorOn_;
+    s.door_open = doorOpen_;
     return s;
 }

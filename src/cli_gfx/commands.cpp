@@ -92,7 +92,7 @@ void Commands::handleLine_(const String &line)
 void Commands::reply_(const String &s)
 {
     Serial.print(s);
-    gfxui_log(s.c_str()); // optional log line to LCD
+    // gfxui_log(s.c_str()); // optional log line to LCD
 }
 
 void Commands::doHelp_()
@@ -112,7 +112,7 @@ void Commands::doRead_(const String &what)
         }
         reply_(String("OK TEMP ") + String(t, 2) + "\n");
         auto s = sensors_.snapshot();
-        gfxui_showStatus(s.tempC, s.fan12vRunning, s.heaterOn, s.fan230On, s.motorOn);
+        gfx_show(s.tempC, s.fan12vRunning, s.heaterOn, s.fan230On, s.motorOn, s.door_open);
         return;
     }
     if (what == "FAN12V")
@@ -120,7 +120,7 @@ void Commands::doRead_(const String &what)
         bool f = sensors_.readFan12vRunning();
         reply_(String("OK FAN12V ") + (f ? "1\n" : "0\n"));
         auto s = sensors_.snapshot();
-        gfxui_showStatus(s.tempC, s.fan12vRunning, s.heaterOn, s.fan230On, s.motorOn);
+        gfx_show(s.tempC, s.fan12vRunning, s.heaterOn, s.fan230On, s.motorOn, s.door_open);
         return;
     }
     reply_("ERR InvalidArgument\n");
@@ -145,7 +145,7 @@ void Commands::doWrite_(const String &target, const String &state)
 
     reply_(ok ? "OK\n" : "ERR WriteFailed\n");
     auto s = sensors_.snapshot();
-    gfxui_showStatus(s.tempC, s.fan12vRunning, s.heaterOn, s.fan230On, s.motorOn);
+    gfx_show(s.tempC, s.fan12vRunning, s.heaterOn, s.fan230On, s.motorOn, s.door_open);
 }
 
 void Commands::doStatus_()
@@ -153,5 +153,5 @@ void Commands::doStatus_()
     auto s = sensors_.snapshot();
     String line = "OK STATUS TEMP=" + String(s.tempC, 2) + " FAN12V=" + String(s.fan12vRunning ? 1 : 0) + " HEATER=" + String(s.heaterOn ? 1 : 0) + " FAN230=" + String(s.fan230On ? 1 : 0) + " MOTOR=" + String(s.motorOn ? 1 : 0) + "\n";
     reply_(line);
-    gfxui_showStatus(s.tempC, s.fan12vRunning, s.heaterOn, s.fan230On, s.motorOn);
+    gfx_show(s.tempC, s.fan12vRunning, s.heaterOn, s.fan230On, s.motorOn, s.door_open);
 }

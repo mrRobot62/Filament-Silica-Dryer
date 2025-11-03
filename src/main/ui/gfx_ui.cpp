@@ -293,3 +293,5 @@ void gfx_footer(int32_t encoderClicks, const char *buttonState)
   gfx->setTextColor(btnCol, C_BG());
   gfx->print(footerBtn);
 }
+
+Arduino_GFX *gfx_handle() { return gfx; }

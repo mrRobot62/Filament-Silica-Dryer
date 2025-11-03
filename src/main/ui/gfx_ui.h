@@ -9,9 +9,5 @@ void gfx_begin();
 void gfx_show(float tempC, bool fan12v, bool heaterOn, bool fan230On, bool motorOn, int fault = 0, bool doorOpen = false);
 void gfx_footer(int32_t encoderClicks, const char *buttonState);
 
-// Legacy-Shims
-// inline void gfxui_log(const char * /*line*/) {}
-// inline void gfxui_showStatus(float t, bool f12, bool h, bool f230, bool m)
-//{
-//    gfx_show(t, f12, h, f230, m, 0);
-//}
+class Arduino_GFX;         // forward decl to avoid header pollution
+Arduino_GFX *gfx_handle(); // access to internal gfx for other UI modules

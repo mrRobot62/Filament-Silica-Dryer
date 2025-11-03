@@ -1,11 +1,19 @@
 #include <Arduino.h>
 #include "gfx_ui.h"
+#include "commands.h"
 
 // -----------------------------------------------------------------------------
 // Test selection via compile-time flags
 // Define one of the TEST_* flags to run a specific test scenario.
 // Example: build with -DTEST_ROTARY
 // -----------------------------------------------------------------------------
+
+static void uiInit()
+{
+    gfx_begin();
+    gfx_show(NAN, /*fan12v*/ false, /*heater*/ false, /*fan230*/ false, /*motor*/ false, /*fault*/ 0, /*doorOpen*/ false);
+    gfx_footer(0, "RELEASED");
+}
 
 #ifdef TEST_ROTARY
 #include "RotarySwitch.h"
@@ -23,13 +31,6 @@
 
 RotarySwitch gRot(PIN_ROT_A, PIN_ROT_B, PIN_ROT_SW, /*buttonActiveLow=*/false);
 RotaryInput gRotInput(gRot);
-
-static void uiInit()
-{
-    gfx_begin();
-    gfx_show(NAN, /*fan12v*/ false, /*heater*/ false, /*fan230*/ false, /*motor*/ false, /*fault*/ 0);
-    gfx_footer(0, "RELEASED");
-}
 
 static void testRotary()
 {
@@ -116,14 +117,12 @@ void setup()
     }
     Serial.println(F("=== CLI_GFX: idle (no TEST_* selected) ==="));
 
-    gfx_begin();
-    gfx_log("No test selected");
-    gfx_show(NAN, false, false, false, false, 0);
+    uiInit();
 }
 
 void loop()
 {
-    gfx_show(NAN, false, false, false, false, 0);
+    gfx_show(NAN, false, false, false, false, 0, false);
     delay(50);
 }
 
