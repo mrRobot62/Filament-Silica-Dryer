@@ -59,6 +59,24 @@ static bool buttonsActive = true; // wenn false: alle Buttons als "idle" (hellbl
 
 // Tab selection
 static HeatTab selectedTab = HeatTab::Heat;
+static HeatTab activeTab = HeatTab::Heat;
+static HeatTab focusedTab = HeatTab::Heat;
+
+HeatTab heat_get_active_tab() { return activeTab; }
+HeatTab heat_get_focused_tab() { return focusedTab; }
+
+// --- Tab-Zustand ---
+
+// --- Rechte Tab-Spalte (Pixel) ---
+// Passe diese Werte ggf. minimal an dein Layout an.
+// static constexpr int TAB_W = 56;
+// static constexpr int TAB_H = 26;
+// static constexpr int TAB_GAP = 8;
+static constexpr int TAB_MARGIN = 6; // rechter Außenrand
+static constexpr int TAB_X = LCD_WIDTH - (TAB_W + TAB_MARGIN);
+static constexpr int TAB_Y0 = 8;
+static constexpr int TAB_AREA_Y = 0;               // Beginn Tab-Spalte
+static constexpr int TAB_AREA_H = LCD_HEIGHT - 30; // bis oberhalb Footer
 
 // --- Dynamic cells ---
 struct Rect
@@ -72,6 +90,18 @@ static Rect cell_log2{6, FOOTER_Y + 8, W - 12, 10};
 
 static HeatButton selected = HeatButton::Start;
 static bool drawn = false;
+
+// Rechte Tab-Spalte (Pixel) – gern feinjustieren
+// static constexpr int TAB_W = 56;
+// static constexpr int TAB_H = 26;
+// static constexpr int TAB_GAP = 8;
+// static constexpr int TAB_MARGIN = 6; // rechter Außenrand
+// static constexpr int TAB_X = LCD_WIDTH - (TAB_W + TAB_MARGIN);
+// static constexpr int TAB_Y0 = 8; // Start oben
+// static constexpr int TAB_AREA_Y = 0;
+// static constexpr int TAB_AREA_H = LCD_HEIGHT - UI::FTR_H; // bis oberhalb Footer
+
+extern Arduino_GFX *gfx;
 
 // helpers
 static void draw_round_btn(Arduino_GFX *g, int x, int y, int w, int h, uint16_t fill, uint16_t outline)
@@ -310,13 +340,54 @@ void heat_set_log(const char *line1, const char *line2)
     g->print(line2 ? line2 : "");
 }
 
-void heat_set_tab(HeatTab t)
+void heat_set_tab(HeatTab tab)
 {
-    selectedTab = t;
-    auto *g = gfx_handle();
-    if (!g)
-        return;
-    draw_tabs(g); // nur Tabs neu zeichnen
+    // dein bestehender Tab-Wechsel (Content) bleibt hier erhalten …
+    s_activeTab = tab;
+    s_focusTab = tab; // bei echter Aktivierung Fokus = aktiv
+    redraw_tab_strip();
+}
+
+void heat_focus_tab(HeatTab tab)
+{
+    focusedTab = tab;
+
+    // Bereich rechts komplett löschen -> verhindert Artefakte
+    gfx->fillRect(TAB_X - 2, TAB_AREA_Y, TAB_W + 4, TAB_AREA_H, C_BG());
+
+    const char *labels[3] = {"HEAT", "CFG", "STAT"};
+
+    for (int i = 0; i < 3; i++)
+    {
+        HeatTab t = (HeatTab)i;
+        uint16_t color;
+
+        if (t == activeTab && t == focusedTab)
+            color = MAKE_RGB565(0, 255, 0); // aktiv + fokussiert → kräftig GRÜN
+        else if (t == activeTab)
+            color = MAKE_RGB565(0, 200, 0); // aktiv → GRÜN
+        else if (t == focusedTab)
+            color = MAKE_RGB565(0, 0, 255); // Fokus → BLAU
+        else
+            color = MAKE_RGB565(255, 255, 255); // inaktiv → WEISS
+
+        const int x = TAB_X;
+        const int y = TAB_Y0 + i * (TAB_H + TAB_GAP);
+
+        // Tab zeichnen
+        gfx->fillRoundRect(x, y, TAB_W, TAB_H, 4, color);
+        gfx->drawRoundRect(x, y, TAB_W, TAB_H, 4, MAKE_RGB565(200, 200, 200));
+
+        // Text mittig
+        gfx->setTextSize(1);
+        gfx->setTextColor(MAKE_RGB565(0, 0, 0), color);
+        const int tw = strlen(labels[i]) * 6; // 6x8 Font
+        const int th = 8;
+        const int tx = x + (TAB_W - tw) / 2;
+        const int ty = y + (TAB_H - th) / 2 + 1;
+        gfx->setCursor(tx, ty);
+        gfx->print(labels[i]);
+    }
 }
 
 // names for logging
@@ -369,4 +440,58 @@ void heat_buttons_set_active(bool active)
     if (!g)
         return;
     draw_buttons(g); // nur die Button-Zeile neu zeichnen
+}
+
+static void draw_tab_cell(int idx, const char *label, uint16_t bg)
+{
+    const int x = TAB_X;
+    const int y = TAB_Y0 + idx * (TAB_H + TAB_GAP);
+
+    // Buttonfläche
+    gfx->fillRoundRect(x, y, TAB_W, TAB_H, 4, bg);
+    // Rahmen dezent
+    gfx->drawRoundRect(x, y, TAB_W, TAB_H, 4, RGB565(200, 200, 200));
+
+    // Text mittig (horizontal)
+    gfx->setTextSize(1);
+    gfx->setTextColor(RGB565(0, 0, 0), bg);
+    int tw = strlen(label) * 6; // Font 6x8
+    int th = 8;
+    int tx = x + (TAB_W - tw) / 2;
+    int ty = y + (TAB_H - th) / 2 + 1;
+    gfx->setCursor(tx, ty);
+    gfx->print(label);
+}
+
+static void redraw_tab_strip()
+{
+    // Bereich rechts komplett löschen -> keine Artefakte
+    gfx->fillRect(TAB_X - 2, TAB_AREA_Y, TAB_W + 4, TAB_AREA_H, RGB565(0, 0, 0));
+
+    const char *labels[3] = {"HEAT", "CFG", "STAT"};
+
+    for (int i = 0; i < 3; i++)
+    {
+        HeatTab t = static_cast<HeatTab>(i);
+        uint16_t col;
+
+        if (t == s_activeTab && t == s_focusTab)
+        {
+            col = RGB565(0, 255, 0); // aktiv + fokussiert: satt Grün
+        }
+        else if (t == s_activeTab)
+        {
+            col = RGB565(0, 200, 0); // aktiv: Grün
+        }
+        else if (t == s_focusTab)
+        {
+            col = RGB565(0, 0, 255); // Fokus: Blau
+        }
+        else
+        {
+            col = RGB565(255, 255, 255); // inaktiv: Weiß
+        }
+
+        draw_tab_cell(i, labels[i], col);
+    }
 }

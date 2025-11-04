@@ -1,27 +1,22 @@
 #pragma once
 #include <Arduino.h>
-#include "sensors/RotarySwitch.h"
+#include "RotarySwitch.h"
 
-void rotary_setup();
-void rotary_update();
+struct RotaryEvent {
+    long newPosition = 0;    // absolute
+    long delta       = 0;    // since last poll
+    bool moved       = false;
 
-struct RotaryEvent
-{
-    long newPosition = 0; // absolute
-    long delta = 0;       // since last poll
-    bool moved = false;
-
-    bool pressed = false;    // current state
-    bool evPressed = false;  // rising edge
-    bool evReleased = false; // falling edge
+    bool pressed       = false;  // current state
+    bool evPressed     = false;  // rising edge
+    bool evReleased    = false;  // falling edge
     bool evDoubleClick = false;
-    bool evLongClick = false;
+    bool evLongClick   = false;
 };
 
-class RotaryInput
-{
+class RotaryInput {
 public:
-    explicit RotaryInput(RotarySwitch &rs) : rs_(rs) {}
+    explicit RotaryInput(RotarySwitch& rs) : rs_(rs) {}
 
     void begin(bool useInternalPullups = true,
                uint32_t debounceMs = 15,
@@ -37,8 +32,7 @@ public:
     }
 
     // Non-blocking; returns true if any movement or button event happened
-    bool poll(RotaryEvent &ev)
-    {
+    bool poll(RotaryEvent& ev) {
         // VERY IMPORTANT: drive the FSM and encoder by updating first
         rs_.update();
 
@@ -47,27 +41,22 @@ public:
         ev.newPosition = pos;
         ev.delta = pos - lastPos_;
         ev.moved = (ev.delta != 0);
-        if (ev.moved)
-            lastPos_ = pos;
+        if (ev.moved) lastPos_ = pos;
 
         // Button edges / state (update() must have run before these calls)
-        ev.pressed = rs_.isPressed();
-        ev.evPressed = rs_.wasPressed();
-        ev.evReleased = rs_.wasReleased();
+        ev.pressed       = rs_.isPressed();
+        ev.evPressed     = rs_.wasPressed();
+        ev.evReleased    = rs_.wasReleased();
         ev.evDoubleClick = rs_.wasDoubleClicked();
-        ev.evLongClick = rs_.wasLongClicked();
+        ev.evLongClick   = rs_.wasLongClicked();
 
         bool changed = ev.moved || ev.evPressed || ev.evReleased || ev.evDoubleClick || ev.evLongClick;
-        if (ev.pressed != lastPressed_)
-        {
-            lastPressed_ = ev.pressed;
-            changed = true;
-        }
+        if (ev.pressed != lastPressed_) { lastPressed_ = ev.pressed; changed = true; }
         return changed;
     }
 
 private:
-    RotarySwitch &rs_;
-    long lastPos_{0};
-    bool lastPressed_{false};
+    RotarySwitch& rs_;
+    long  lastPos_{0};
+    bool  lastPressed_{false};
 };

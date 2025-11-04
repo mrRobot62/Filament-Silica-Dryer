@@ -42,8 +42,8 @@
 #endif
 
 // ===== GFX globals =====
-static Arduino_DataBus *bus = nullptr;
-static Arduino_GFX *gfx = nullptr;
+Arduino_DataBus *bus = nullptr;
+Arduino_GFX *gfx = nullptr;
 static bool initialized = false;
 
 // ===== Farben / Helfer =====

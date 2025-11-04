@@ -1,5 +1,6 @@
 #pragma once
 #include <Arduino.h>
+#include "../pins.h"
 
 // Simple HEAT screen (170x320 landscape) with 3 buttons.
 // Static layout + focus highlight (no timer logic yet).
@@ -23,6 +24,11 @@ void heat_set_selected(HeatButton btn);                  // focus ring/outline u
 void heat_set_filament(const char *name);                // center label (e.g., "PLA+")
 void heat_set_timer_label(const char *hhmmss);           // big time "00:00:00"
 void heat_set_log(const char *line1, const char *line2); // bottom 2 lines
+
+void heat_focus_tab(HeatTab tab); // set blue focus on this tab
+HeatTab heat_get_focused_tab();   // return current blue tab
+HeatTab heat_get_active_tab();    // return current green tab
+
 // Steuert, ob die Button-Zeile aktiv (ein Button blau) oder inaktiv (alle hellblau) gezeichnet wird.
 void heat_buttons_set_active(bool active);
 void heat_set_tab(HeatTab t); // re-renders the tab row
@@ -46,3 +52,8 @@ void heat_cycle_tab(int8_t dir);
 // Optional: names for logging
 const char *heat_button_name(HeatButton b);
 const char *heat_tab_name(HeatTab t);
+
+void heat_set_tab(HeatTab tab);   // existiert bereits bei dir
+void heat_focus_tab(HeatTab tab); // NEU: blauer Fokus
+HeatTab heat_get_active_tab();    // NEU
+HeatTab heat_get_focused_tab();   // NEU

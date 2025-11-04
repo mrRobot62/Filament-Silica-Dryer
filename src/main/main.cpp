@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include "ui/gfx_ui.h"
 #include "ui/heat_screen.h"
-#include "rotary_input.h"
+#include "rotary_handler.h"
 
 // Rotary hooks (this file)
 void rotary_setup();

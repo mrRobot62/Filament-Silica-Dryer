@@ -1,13 +1,16 @@
 #pragma once
 #include <Arduino.h>
+#include <Arduino_GFX_Library.h>
 
-// Flackerfreie, simple STATUS-UI (zweispaltig) mit Footer (Encoder/BTN).
-// Statisches Layout wird einmal gezeichnet; danach werden NUR Wertebereiche
-// als kleine Rechtecke neu gefüllt + Text geschrieben (kein Screen-Blinken).
+// Global handles (declared in gfx_ui.cpp)
+extern Arduino_DataBus *bus;
+extern Arduino_GFX *gfx;
 
+// Public API
 void gfx_begin();
-void gfx_show(float tempC, bool fan12v, bool heaterOn, bool fan230On, bool motorOn, int fault = 0, bool doorOpen = false);
+void gfx_show(float tempC, bool fan12v, bool heaterOn, bool fan230On,
+              bool motorOn, int fault = 0, bool doorOpen = false);
 void gfx_footer(int32_t encoderClicks, const char *buttonState);
 
-class Arduino_GFX;         // forward decl to avoid header pollution
-Arduino_GFX *gfx_handle(); // access to internal gfx for other UI modules
+// Optional getter for modules needing direct access
+Arduino_GFX *gfx_handle();

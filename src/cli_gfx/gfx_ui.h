@@ -1,6 +1,9 @@
 #pragma once
 #include <Arduino.h>
 
+extern Arduino_DataBus *bus;
+extern Arduino_GFX *gfx;
+
 // Flackerfreie, simple STATUS-UI (zweispaltig) mit Footer (Encoder/BTN).
 // Statisches Layout wird einmal gezeichnet; danach werden NUR Wertebereiche
 // als kleine Rechtecke neu gefüllt + Text geschrieben (kein Screen-Blinken).

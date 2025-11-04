@@ -42,9 +42,10 @@
 #endif
 
 // ===== GFX globals =====
-static Arduino_DataBus *bus = nullptr;
-static Arduino_GFX *gfx = nullptr;
-static bool initialized = false;
+// ===== GFX globals (shared across modules) =====
+Arduino_DataBus *bus = nullptr;  // global definition
+Arduino_GFX *gfx = nullptr;      // global definition
+static bool initialized = false; // internal only
 
 // ===== Farben / Helfer =====
 static inline uint16_t MAKE_RGB565(uint8_t r, uint8_t g, uint8_t b)
