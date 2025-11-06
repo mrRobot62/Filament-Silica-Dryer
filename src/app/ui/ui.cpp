@@ -2,35 +2,23 @@
 #include "../pins.h"
 #include "encoder_input.h"
 #include <Arduino.h>
-
 #include <lvgl.h>
 
-// =====================================================================================
-// Internal state
-// =====================================================================================
 static bool s_focus_mode = false; // false=fine(1), true=coarse(15)
 static bool s_ui_inited = false;
 
-// Widgets
 static lv_obj_t *s_screen = nullptr;
 static lv_obj_t *s_lbl_title = nullptr;
 static lv_obj_t *s_lbl_pos = nullptr;
 static lv_obj_t *s_lbl_step = nullptr;
 static lv_obj_t *s_lbl_click = nullptr;
 
-static lv_obj_t *s_btnm = nullptr;     // Button-Matrix
-static lv_obj_t *s_spn_time = nullptr; // Spinbox: time (minutes)
-static lv_obj_t *s_spn_temp = nullptr; // Spinbox: temperature (°C)
-static lv_obj_t *s_roller = nullptr;   // Roller: filament type
+static lv_obj_t *s_btnm = nullptr;
+static lv_obj_t *s_spn_time = nullptr;
+static lv_obj_t *s_spn_temp = nullptr;
+static lv_obj_t *s_roller = nullptr;
 
 static lv_group_t *s_group = nullptr;
-
-// =====================================================================================
-// Helpers
-// =====================================================================================
-static inline void ui_log(const char *msg) {
-  Serial.println(msg);
-}
 
 static inline void ui_update_pos_label(long pos) {
   if (!s_lbl_pos)
@@ -39,7 +27,6 @@ static inline void ui_update_pos_label(long pos) {
   snprintf(buf, sizeof(buf), "pos: %ld", pos);
   lv_label_set_text(s_lbl_pos, buf);
 }
-
 static inline void ui_update_step_label(int step) {
   if (!s_lbl_step)
     return;
@@ -47,52 +34,39 @@ static inline void ui_update_step_label(int step) {
   snprintf(buf, sizeof(buf), "step: %d", step);
   lv_label_set_text(s_lbl_step, buf);
 }
-
 static inline void ui_update_click_label(const char *text) {
   if (!s_lbl_click)
     return;
   lv_label_set_text(s_lbl_click, text);
 }
-
 static inline void ui_focus_obj(lv_obj_t *obj) {
-  if (!obj || !s_group)
+  if (!obj)
+    return;
+  if (!s_group)
     return;
   lv_group_focus_obj(obj);
 }
 
-// =====================================================================================
-// Button matrix
-// =====================================================================================
 static void btnm_event_cb(lv_event_t *e) {
-  // LVGL 9: lv_event_get_target(...) returns void*  -> cast to lv_obj_t*
-  lv_obj_t *obj = (lv_obj_t *)lv_event_get_target(e);
+  lv_obj_t *obj = (lv_obj_t *)lv_event_get_target(e); // LVGL9: cast from void*
   if (lv_event_get_code(e) == LV_EVENT_VALUE_CHANGED) {
     uint16_t id = lv_btnmatrix_get_selected_btn(obj);
     const char *txt = lv_btnmatrix_get_btn_text(obj, id);
     Serial.printf("BTN: %s\n", txt ? txt : "(null)");
   }
 }
-
-// =====================================================================================
-// Spinboxes
-// =====================================================================================
 static void spn_time_event_cb(lv_event_t *e) {
   if (lv_event_get_code(e) == LV_EVENT_VALUE_CHANGED) {
     int32_t v = lv_spinbox_get_value((lv_obj_t *)lv_event_get_target(e));
     Serial.printf("TIME: %ld min\n", (long)v);
   }
 }
-
 static void spn_temp_event_cb(lv_event_t *e) {
   if (lv_event_get_code(e) == LV_EVENT_VALUE_CHANGED) {
     int32_t v = lv_spinbox_get_value((lv_obj_t *)lv_event_get_target(e));
     Serial.printf("TEMP: %ld C\n", (long)v);
   }
 }
-
-// =====================================================================================
-// Roller
-// =====================================================================================
 static void roller_event_cb(lv_event_t *e) {
   if (lv_event_get_code(e) == LV_EVENT_VALUE_CHANGED) {
     char buf[64];
@@ -101,9 +75,6 @@ static void roller_event_cb(lv_event_t *e) {
   }
 }
 
-// =====================================================================================
-// Build UI
-// =====================================================================================
 static void build_ui() {
   s_screen = lv_obj_create(NULL);
   lv_obj_set_style_bg_color(s_screen, lv_color_white(), 0);
@@ -125,7 +96,6 @@ static void build_ui() {
   lv_label_set_text(s_lbl_click, "click: -");
   lv_obj_align_to(s_lbl_click, s_lbl_step, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 8);
 
-  // Button matrix
   static const char *map[] = {"Start", "Stop", "Dry", "\n", "Load", "Save", "Info", ""};
   s_btnm = lv_btnmatrix_create(s_screen);
   lv_btnmatrix_set_map(s_btnm, map);
@@ -133,7 +103,6 @@ static void build_ui() {
   lv_obj_align(s_btnm, LV_ALIGN_LEFT_MID, 8, 0);
   lv_obj_add_event_cb(s_btnm, btnm_event_cb, LV_EVENT_ALL, NULL);
 
-  // Spinboxes
   s_spn_time = lv_spinbox_create(s_screen);
   lv_spinbox_set_range(s_spn_time, 0, 999);
   lv_obj_set_size(s_spn_time, 80, 36);
@@ -146,14 +115,12 @@ static void build_ui() {
   lv_obj_align_to(s_spn_temp, s_spn_time, LV_ALIGN_OUT_BOTTOM_MID, 0, 12);
   lv_obj_add_event_cb(s_spn_temp, spn_temp_event_cb, LV_EVENT_ALL, NULL);
 
-  // Roller
   s_roller = lv_roller_create(s_screen);
   lv_roller_set_options(s_roller, "PLA\nPETG\nABS\nASA\nTPU\nPA-CF\nPET-CF", LV_ROLLER_MODE_NORMAL);
   lv_obj_set_size(s_roller, 110, 110);
   lv_obj_align(s_roller, LV_ALIGN_RIGHT_MID, -8, 40);
   lv_obj_add_event_cb(s_roller, roller_event_cb, LV_EVENT_ALL, NULL);
 
-  // Focus group
   s_group = lv_group_get_default();
   if (!s_group) {
     s_group = lv_group_create();
@@ -168,13 +135,11 @@ static void build_ui() {
   lv_scr_load(s_screen);
 }
 
-// =====================================================================================
-// Encoder integration
-// =====================================================================================
 static inline bool ui_poll_pos_and_update() {
   long p;
   if (encoder_poll_position_change(&p)) {
     ui_update_pos_label(p);
+    // Serial.printf("POS %ld\n", p); // <-- debug: sofort sichtbar
     return true;
   }
   return false;
@@ -186,7 +151,6 @@ static void ui_apply_delta_to_focused(int32_t delta) {
   lv_obj_t *f = lv_group_get_focused(s_group);
   if (!f)
     return;
-
   int8_t step = (delta > 0) ? +1 : -1;
   if (f == s_btnm) {
     int cur = lv_btnmatrix_get_selected_btn(s_btnm);
@@ -224,6 +188,14 @@ static void ui_apply_delta_to_focused(int32_t delta) {
 static inline void ui_handle_encoder_events() {
   EncEvent e = encoder_poll();
 
+  // Immer loggen, damit wir Sicht haben:
+  // Serial.printf("ENC d=%ld S=%d D=%d L=%d\n", (long)e.delta, (int)e.shortClick, (int)e.doubleClick,
+  // (int)e.longClick);
+  // Nur loggen, wenn Bewegung oder ein Click-Event vorliegt
+  if (e.delta != 0 || e.shortClick || e.doubleClick || e.longClick) {
+    Serial.printf("ENC d=%ld S=%d D=%d L=%d\n", (long)e.delta, (int)e.shortClick, (int)e.doubleClick, (int)e.longClick);
+  }
+  
   if (e.doubleClick) {
     ui_update_click_label("DoubleClick");
     encoder_set_step(5);
@@ -237,7 +209,7 @@ static inline void ui_handle_encoder_events() {
     if (s_group) {
       lv_obj_t *f = lv_group_get_focused(s_group);
       if (f)
-        lv_obj_send_event(f, LV_EVENT_CLICKED, NULL); // LVGL 9
+        lv_obj_send_event(f, LV_EVENT_CLICKED, NULL);
     }
     encoder_set_step(1);
     ui_update_step_label(1);
@@ -247,9 +219,6 @@ static inline void ui_handle_encoder_events() {
     ui_apply_delta_to_focused(e.delta);
 }
 
-// =====================================================================================
-// Public API
-// =====================================================================================
 void ui_init() {
   if (s_ui_inited)
     return;
@@ -257,13 +226,17 @@ void ui_init() {
   encoder_set_reverse(false);
   apply_focus_step();
   build_ui();
-  ui_log("UI init done.");
-  ui_log("Encoder init done.");
+  Serial.println("UI init done.");
+  Serial.println("Encoder init done.");
   s_ui_inited = true;
 }
 
 void ui_task() {
+  // **WICHTIG**: genau EIN update pro Zyklus
+  encoder_update();
+
   (void)ui_poll_pos_and_update();
+
   ui_handle_encoder_events();
 }
 
@@ -283,6 +256,7 @@ void apply_focus_step() {
 }
 
 void ui_update_from_encoder() {
+  encoder_update(); // ebenfalls nur EIN Update
   (void)ui_poll_pos_and_update();
   ui_handle_encoder_events();
 }

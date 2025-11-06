@@ -15,10 +15,9 @@ struct EncEvent {
 };
 
 void encoder_init();
-EncEvent encoder_poll();
-
-// NOTE: Use `long*` to match ESP32 (GCC) C++ mangling and avoid typedef mismatch.
-bool encoder_poll_position_change(long* new_pos);
+void encoder_update();                         // call ONCE per loop
+EncEvent encoder_poll();                       // read events/delta AFTER encoder_update()
+bool encoder_poll_position_change(long* new_pos); // read pos-change AFTER encoder_update()
 
 void encoder_set_step(int8_t step);
 void encoder_set_reverse(bool reverseCW_is_negative);
