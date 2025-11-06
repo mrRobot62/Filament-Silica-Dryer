@@ -12,21 +12,21 @@
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug",
-            "executable": "/Users/bernhardklein/workspace/arduino/esp32/Filament-Dryer/.pio/build/main/firmware.elf",
-            "projectEnvName": "main",
+            "executable": "/Users/bernhardklein/workspace/arduino/esp32/Filament-Dryer/.pio/build/app/firmware.elf",
+            "projectEnvName": "app",
             "toolchainBinDir": "/Users/bernhardklein/.platformio/packages/toolchain-xtensa-esp32s3/bin",
             "internalConsoleOptions": "openOnSessionStart",
             "preLaunchTask": {
                 "type": "PlatformIO",
-                "task": "Pre-Debug (main)"
+                "task": "Pre-Debug (app)"
             }
         },
         {
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug (skip Pre-Debug)",
-            "executable": "/Users/bernhardklein/workspace/arduino/esp32/Filament-Dryer/.pio/build/main/firmware.elf",
-            "projectEnvName": "main",
+            "executable": "/Users/bernhardklein/workspace/arduino/esp32/Filament-Dryer/.pio/build/app/firmware.elf",
+            "projectEnvName": "app",
             "toolchainBinDir": "/Users/bernhardklein/.platformio/packages/toolchain-xtensa-esp32s3/bin",
             "internalConsoleOptions": "openOnSessionStart"
         },
@@ -34,8 +34,8 @@
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug (without uploading)",
-            "executable": "/Users/bernhardklein/workspace/arduino/esp32/Filament-Dryer/.pio/build/main/firmware.elf",
-            "projectEnvName": "main",
+            "executable": "/Users/bernhardklein/workspace/arduino/esp32/Filament-Dryer/.pio/build/app/firmware.elf",
+            "projectEnvName": "app",
             "toolchainBinDir": "/Users/bernhardklein/.platformio/packages/toolchain-xtensa-esp32s3/bin",
             "internalConsoleOptions": "openOnSessionStart",
             "loadMode": "manual"

@@ -6,20 +6,35 @@
 
 ## Powerboard – Anschluss P1–P12
 
-|   Pin   | Bezeichnung | Typ / Richtung                 | Signalpfad (vereinfacht)                              | Beschreibung / Funktion                                                                                                               |
-| :-----: | :---------- | :----------------------------- | :---------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------ |
-| **P1**  | TEMP        | Eingang (analog)               | → Spannungsteiler → ADC des MCU-Boards                | Anschluss des NTC-Temperatursensors. Spannung sinkt bei steigender Temperatur.<br>P1-R12-NTC-5V                                       |
-| **P2**  | +5 V        | Ausgang (DC)                   | ← 7805 / Sekundärnetzteil                             | Haupt-Versorgungsspannung für Steuerboard, Sensoren und Logik.                                                                        |
-| **P3**  | GND         | Bezugspotential                | ← Sekundär-GND                                        | Masse aller Logik- und Sensorkreise (galvanisch getrennt von Netz).                                                                   |
-| **P4**  | NC          | –                              | –                                                     | Nicht belegt (möglicherweise Reserveleitung).                                                                                         |
-| **P5**  | FAN12V      | Eingang (digital)              | → Transistor Q10 → Lüfter 12V                         | Vermutung: wird geprüft ob der Kühllüfter läuft. Lüfter liegt an Basis von Q10<br>R16-Kollector(Q10)-Basis(10)-12VLüfter-Emitter(GND) |
-| **P6**  | HEATER REL  | Ausgang (digital, low-aktiv)   | → Transistor Q7 → Relais-Spule → Heizwiderstand 230 V | Steuert das Heizungsrelais. Aktiv solange Solltemperatur nicht erreicht ist.                                                          |
-| **P7**  | FAN 230V    | Ausgang (digital, Optokoppler) | → Q8 → PD1 → Q1 (Triac) → 230 V-Lüfter                | Fan & fan-l gehen an den Spaltmotor und schalten den Lüfter inkl. rotes Kabel                                                         |
-| **P8**  | LAMP 230V   | Ausgang (digital, Optokoppler) | → Q9 → PD2 → Q2 (Triac) → 230 V-Lampe                 | Schaltet Innenbeleuchtung oder Heizraumlampe.                                                                                         |
-| **P9**  | MOTOR 230V  | Ausgang (digital, Optokoppler) | → Q10 → PD3 → Q3 (Triac) → 230 V-Motor                | Schaltet den Antriebsmotor Drehspieß                                                                                                  |
-| **P10** | FAN-L 230V  | Ausgang (digital, Optokoppler) | → Q11 → PD4 → Q4 (Triac) → 230 V-Sekundärlüfter       | FAN & FAN-L Lüfter, schwarzes Kabel.                                                                                                  |
-| **P11** | NC          | –                              | –                                                     | Nicht belegt (Liegt aber 5V permanent an über Logic-Board)                                                                            |
-| **P12** | DOOR        | Eingang (digital)              | → Pull-Up → Türschalter (nach GND)                    | Türkontakt. Aktiv LOW, zieht auf Masse wenn Tür geschlossen.                                                                          |
+|   Pin   | Bezeichnung | Typ / Richtung                 | Signalpfad (vereinfacht)                              | Beschreibung / Funktion                                                                                                                                                     |
+| :-----: | :---------- | :----------------------------- | :---------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **P1**  | TEMP        | Eingang (analog)               | → Spannungsteiler → ADC des MCU-Boards                | Anschluss des NTC-Temperatursensors. Spannung sinkt bei steigender Temperatur.<br>P1-R12-NTC-5V                                                                             |
+| **P2**  | +5 V        | Ausgang (DC)                   | ← 7805 / Sekundärnetzteil                             | Haupt-Versorgungsspannung für Steuerboard, Sensoren und Logik.                                                                                                              |
+| **P3**  | GND         | Bezugspotential                | ← Sekundär-GND                                        | Masse aller Logik- und Sensorkreise (galvanisch getrennt von Netz).                                                                                                         |
+| **P4**  | NC          | –                              | –                                                     | Nicht belegt (möglicherweise Reserveleitung).                                                                                                                               |
+| **P5**  | FAN12V      | Eingang (digital), Ausgang     | → Transistor Q10 → Lüfter 12V                         | Vermutung: wird geprüft ob der Kühllüfter läuft. Lüfter liegt an Basis von Q10<br>R16-Kollector(Q10)-Basis(10)-12VLüfter-Emitter(GND), Test bei 5V auf P5 springt Lüfter an |
+| **P6**  | HEATER REL  | Ausgang (digital, low-aktiv)   | → Transistor Q7 → Relais-Spule → Heizwiderstand 230 V | Steuert das Heizungsrelais. Aktiv solange Solltemperatur nicht erreicht ist. Ist aktuell gesperrt, ggf. müssen P5 und P7(oder P10) ebenfalls auf 5V gehen                   |
+| **P7**  | FAN 230V    | Ausgang (digital, Optokoppler) | → Q8 → PD1 → Q1 (Triac) → 230 V-Lüfter                | Fan & fan-l gehen an den Spaltmotor und schalten den Lüfter inkl. rotes Kabel. Test OK, P7=5V=Fan FAST                                                                      |
+| **P8**  | LAMP 230V   | Ausgang (digital, Optokoppler) | → Q9 → PD2 → Q2 (Triac) → 230 V-Lampe                 | Schaltet Innenbeleuchtung oder Heizraumlampe.                                                                                                                               |
+| **P9**  | MOTOR 230V  | Ausgang (digital, Optokoppler) | → Q10 → PD3 → Q3 (Triac) → 230 V-Motor                | Schaltet den Antriebsmotor Drehspieß                                                                                                                                        |
+| **P10** | FAN-L 230V  | Ausgang (digital, Optokoppler) | → Q11 → PD4 → Q4 (Triac) → 230 V-Sekundärlüfter       | FAN & FAN-L Lüfter, schwarzes Kabel. Test OK, P10=5V=FAN slow                                                                                                               |
+| **P11** | NC          | –                              | –                                                     | Nicht belegt (Liegt aber 5V permanent an über Logic-Board)                                                                                                                  |
+| **P12** | DOOR        | Eingang (digital)              | → Pull-Up → Türschalter (nach GND)                    | Türkontakt. Aktiv LOW, zieht auf Masse wenn Tür geschlossen. Test offen, Türkontakt wird aktuell warum auch immer ignoriert ohne Steuerboard                                |
+|         |             |                                |                                                       |
+
+## Test 2025-11-04
+- P1 NTC, im Test keinerlei Veränderung der Spannung, muss nochmals geprüft werden
+- P2 5V
+- P3 GND
+- P4 NC
+- P5 Fan12 V, wenn 5V anliegt, dreht der 12V Lüfter. Der Lüfter muss aber drehen, wenn die Heizung angeht, wegen kühlung des powerBoards - wichtig
+- P6 Heater, ist trotz 5V nicht angesprungen. Ggf wegen fehlendem Fan12=On, Fan230=On, Tür war aber geschlossen. Erneuter Test mit Steuerbord
+- P7 Funktioniert, Fan dreht schnell (und hörbar lauter)
+- P8 LAMP, funktioniert bei 5V
+- P9 bei 5V, Drehspießmotor dreht
+- P10 5V FAN-L (L=Low) motor dreht langsamer
+- P11 NC
+- P12 muss nochmals geprüft werden, wenn Steuerbord angeschlossen ist                                                               |
 
 ## 🧩 Ergänzende Hinweise
 - Messreferenz:
@@ -36,6 +51,7 @@
   - Door-Signal (P12):
 
 Meist als „Safety Interlock“ implementiert – blockiert Heizung und Motor, wenn offen.
+
 
 
 ## Mess-Leitfaden (P1–P12) – erwartete Spannungen & Prüfhinweise
@@ -58,6 +74,8 @@ Meist als „Safety Interlock“ implementiert – blockiert Heizung und Motor, 
 | **P10** | FAN-L 230 V (Opto) |      ~0 V       |          **5 V**          | 2. Lüfterleitung/FAN-L aktivieren              | Häufig gekoppelt mit P5 oder Heizung (logisch verknüpft).   |
 | **P11** | NC                 |       0 V       |            0 V            | –                                              | Nicht belegt.                                               |
 | **P12** | Door (Schalter)    | **5 V** (offen) |   **0 V** (geschlossen)   | Tür öffnen/schließen                           | **Active LOW**: geschlossen → 0 V, offen → 5 V (Pull-Up).   |
+
+###
 
 ### Zusatz-Messpunkte (Sekundärseite)
 | Punkt                        | Leerlauf |     Aktiv     | Hinweis                                    |
