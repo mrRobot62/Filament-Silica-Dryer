@@ -185,17 +185,18 @@ static void ui_apply_delta_to_focused(int32_t delta) {
   }
 }
 
-static inline void ui_handle_encoder_events() {
-  EncEvent e = encoder_poll();
+static inline void ui_handle_encoder_events(const EncEvent &e) {
+  // EncEvent e = encoder_poll();
 
-  // Immer loggen, damit wir Sicht haben:
+  // Immer loggen, damit wir Sicht haben:ui_handle_encoder_events
   // Serial.printf("ENC d=%ld S=%d D=%d L=%d\n", (long)e.delta, (int)e.shortClick, (int)e.doubleClick,
   // (int)e.longClick);
   // Nur loggen, wenn Bewegung oder ein Click-Event vorliegt
-  if (e.delta != 0 || e.shortClick || e.doubleClick || e.longClick) {
-    Serial.printf("ENC d=%ld S=%d D=%d L=%d\n", (long)e.delta, (int)e.shortClick, (int)e.doubleClick, (int)e.longClick);
-  }
-  
+  //   if (e.delta != 0 || e.shortClick || e.doubleClick || e.longClick) {
+  //     Serial.printf("ENC d=%ld S=%d D=%d L=%d\n", (long)e.delta, (int)e.shortClick, (int)e.doubleClick,
+  //     (int)e.longClick);
+  //   }
+
   if (e.doubleClick) {
     ui_update_click_label("DoubleClick");
     encoder_set_step(5);
@@ -231,13 +232,50 @@ void ui_init() {
   s_ui_inited = true;
 }
 
+// void ui_task() {
+//   // **WICHTIG**: genau EIN update pro Zyklus
+//   encoder_update();
+
+//   (void)ui_poll_pos_and_update();
+
+//   ui_handle_encoder_events();
+// }
+
 void ui_task() {
-  // **WICHTIG**: genau EIN update pro Zyklus
-  encoder_update();
+  EncEvent e = encoder_poll();
 
-  (void)ui_poll_pos_and_update();
+  // Nur loggen, wenn tatsächlich was passiert ist:
+  if (e.delta != 0 || e.shortClick || e.doubleClick || e.longClick) {
+    Serial.printf("ENC d=%ld S=%d D=%d L=%d\n", (long)e.delta, (int)e.shortClick, (int)e.doubleClick, (int)e.longClick);
+  }
 
-  ui_handle_encoder_events();
+  // Position-Label aktualisieren (optional)
+  // ui_update_pos_label(e.pos);
+
+  // Intent-first Aktionen:
+  if (e.doubleClick) {
+    ui_update_click_label("DoubleClick");
+    encoder_set_step(5);
+    ui_update_step_label(5);
+  } else if (e.longClick) {
+    ui_update_click_label("LongClick");
+    encoder_set_step(15);
+    ui_update_step_label(15);
+  } else if (e.shortClick) {
+    ui_update_click_label("ShortClick");
+    // Fokus-Click
+    if (s_group) {
+      lv_obj_t *f = lv_group_get_focused(s_group);
+      if (f)
+        lv_obj_send_event(f, LV_EVENT_CLICKED, NULL);
+    }
+    encoder_set_step(1);
+    ui_update_step_label(1);
+    ui_update_pos_label(e.pos);
+  }
+
+  if (e.delta != 0)
+    ui_apply_delta_to_focused(e.delta);
 }
 
 void ui_set_focus(bool focused) {
@@ -255,8 +293,8 @@ void apply_focus_step() {
   }
 }
 
-void ui_update_from_encoder() {
-  encoder_update(); // ebenfalls nur EIN Update
-  (void)ui_poll_pos_and_update();
-  ui_handle_encoder_events();
-}
+// void ui_update_from_encoder() {
+//   // encoder_update();
+//   (void)ui_poll_pos_and_update();
+//   ui_handle_encoder_events();
+// }

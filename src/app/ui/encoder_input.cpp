@@ -16,7 +16,7 @@ void encoder_init() {
   enc.setDoubleClickWindowMs(300);
   enc.setLongClickMs(1500); // statt 2500 ms
   enc.setStep(1);
-  enc.setReverseDirection(false);
+  enc.setReverseDirection(true);
 }
 
 void encoder_update() {
@@ -46,21 +46,22 @@ void encoder_update() {
 // }
 
 EncEvent encoder_poll() {
-  enc.update(); // <-- zurück rein: genau hier updaten
+  enc.update(); // genau ein Update hier
 
   EncEvent e{};
-  // Intent-first
-  if (enc.wasDoubleClicked())
-    e.doubleClick = true;
-  else if (enc.wasLongPressed())
-    e.longClick = true;
-  else if (enc.wasClicked())
-    e.shortClick = true;
 
-  // Position & Delta (nach update)
+  // Intent-first NUR mit den Original-APIs der RotarySwitch-Lib
+  if (enc.wasDoubleClicked()) {
+    e.doubleClick = true;
+  } else if (enc.wasLongClicked()) { // <— wichtig: wasLongClicked() statt wasLongPressed()
+    e.longClick = true;
+  } else if (enc.wasShortClicked()) { // <— wichtig: wasShortClicked()
+    e.shortClick = true;
+  }
+
+  // Danach Bewegung/Edges
   e.pos = enc.getPosition();
   e.delta = enc.delta();
-
   e.pressed = enc.wasPressed();
   e.released = enc.wasReleased();
   return e;

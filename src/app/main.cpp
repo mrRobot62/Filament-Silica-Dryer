@@ -101,13 +101,11 @@ void loop() {
     last_ms = now;
   }
 
-  // Encoder-Events → UI
-  EncEvent ev = encoder_poll();
-  if (ev.delta || ev.shortClick || ev.doubleClick || ev.longClick) {
-    Serial.printf("ENC d=%d S=%d D=%d L=%d\n", ev.delta, ev.shortClick, ev.doubleClick, ev.longClick);
-    ui_update_from_encoder();
-  }
+  // Genau EIN Poll + UI-Update (inkl. Logging) pro Zyklus
+  ui_task();
 
-  lv_timer_handler(); // LVGL 9 weiterhin gültig
+  // LVGL verarbeiten
+  lv_timer_handler();
+
   delay(1);
 }
