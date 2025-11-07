@@ -1,5 +1,4 @@
 #include "pins.h"
-#include "ui/encoder_input.h"
 #include "ui/ui.h"
 #include <Arduino.h>
 #include <Arduino_GFX_Library.h>
@@ -81,7 +80,6 @@ void setup() {
   Serial.println("UI init done.");
 
   // Encoder
-  encoder_init();
   Serial.println("Encoder init done.");
 
   // Kleiner Hinweis am Rand
@@ -92,6 +90,8 @@ void setup() {
 }
 
 void loop() {
+  // Genau EIN Poll + UI-Update (inkl. Logging) pro Zyklus
+  ui_task();
   // LVGL Tick (ca. alle 5 ms)
   static uint32_t last_ms = millis();
   uint32_t now = millis();
@@ -100,10 +100,6 @@ void loop() {
     lv_tick_inc(diff);
     last_ms = now;
   }
-
-  // Genau EIN Poll + UI-Update (inkl. Logging) pro Zyklus
-  ui_task();
-
   // LVGL verarbeiten
   lv_timer_handler();
 

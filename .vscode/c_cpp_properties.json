@@ -639,6 +639,7 @@
                 "LCD_HEIGHT=170",
                 "LCD_ROTATION=1",
                 "USE_ROTARYSWITCH",
+                "ROTARYSWITCHDBG",
                 "UI_DARK=1",
                 "ESP32_ARDUINO_LIB_BUILDER",
                 "ESP_PLATFORM",
