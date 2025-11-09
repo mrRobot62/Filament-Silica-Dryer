@@ -3,3 +3,4 @@
 // Public UI API
 void ui_init(); // build LVGL widgets + init encoder
 void ui_task(); // call once per loop (does update+poll exactly once)
+void build_widgets(); // build LVGL widgets only (for advanced use)

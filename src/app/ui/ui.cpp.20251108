@@ -1,0 +1,342 @@
+#include "../pins.h"
+#include <RotarySwitch.h>
+#include <limits.h>
+#include <lvgl.h>
+
+static lv_obj_t *scr = nullptr;
+static lv_obj_t *lblPos = nullptr;
+static lv_obj_t *lblStep = nullptr;
+static lv_obj_t *lblClick = nullptr;
+static lv_obj_t *btnm = nullptr;
+static lv_obj_t *spnTime = nullptr;
+static lv_obj_t *spnTemp = nullptr;
+static lv_obj_t *roller = nullptr;
+static lv_group_t *group = nullptr;
+
+static RotarySwitch rs(ENC_PIN_A, ENC_PIN_B, ENC_PIN_SW);
+
+static long s_lastPosShown = LONG_MIN; // Merker für Anzeige-Position
+
+static inline void clear_chrome(lv_obj_t *o) {
+  lv_obj_clear_flag(o, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_style_border_opa(o, LV_OPA_TRANSP, 0);
+  lv_obj_set_style_outline_opa(o, LV_OPA_TRANSP, 0);
+  lv_obj_set_style_shadow_opa(o, LV_OPA_TRANSP, 0);
+}
+
+static inline void apply_dark_screen(lv_obj_t *s) {
+  lv_obj_set_style_bg_color(s, lv_color_black(), 0);
+  lv_obj_set_style_bg_opa(s, LV_OPA_COVER, 0);
+}
+
+static inline lv_obj_t *make_label(lv_obj_t *parent, const char *txt, lv_align_t align, lv_coord_t x_ofs,
+                                   lv_coord_t y_ofs) {
+  lv_obj_t *l = lv_label_create(parent);
+  lv_label_set_text(l, txt);
+  lv_obj_align(l, align, x_ofs, y_ofs);
+  clear_chrome(l);
+  return l;
+}
+
+static inline void set_pos_label(long p) {
+  if (!lblPos)
+    return;
+  char buf[48];
+  snprintf(buf, sizeof(buf), "pos: %ld", p);
+  lv_label_set_text(lblPos, buf);
+}
+static inline void set_step_label(int step) {
+  if (!lblStep)
+    return;
+  char buf[32];
+  snprintf(buf, sizeof(buf), "step: %d", step);
+  lv_label_set_text(lblStep, buf);
+}
+static inline void set_click_label(const char *t) {
+  if (lblClick)
+    lv_label_set_text(lblClick, t);
+}
+
+// Apply rotary step (+1 / -1) to currently focused widget
+static void apply_step_to_focused(int8_t step) {
+  if (!group)
+    return;
+
+  lv_obj_t *f = lv_group_get_focused(group);
+  if (!f)
+    return;
+
+  // Spinboxes: erhöhen oder verringern
+  if (lv_obj_check_type(f, &lv_spinbox_class)) {
+    if (step > 0)
+      lv_spinbox_increment(f);
+    else
+      lv_spinbox_decrement(f);
+    return;
+  }
+
+  // Roller (z. B. Filamenttyp)
+  if (lv_obj_check_type(f, &lv_roller_class)) {
+    int sel = lv_roller_get_selected(f);
+    int cnt = lv_roller_get_option_cnt(f);
+    sel += step;
+    if (sel < 0)
+      sel = 0;
+    if (sel >= cnt)
+      sel = cnt - 1;
+    lv_roller_set_selected(f, sel, LV_ANIM_OFF);
+    return;
+  }
+
+  // Fallback – andere Widgets ignorieren
+}
+
+void ui_init() {
+  // --- RotarySwitch init (wie gehabt) ---
+  rs.begin(true);
+  pinMode(ENC_PIN_SW, INPUT);
+  rs.setButtonActiveLow(false);
+  rs.setDebounceMs(15);
+  rs.setDoubleClickWindowMs(300);
+  rs.setLongClickMs(1500);
+  rs.setStep(1);
+  rs.setReverseDirection(false);
+
+  // --- Root screen ---
+  scr = lv_obj_create(NULL);
+  apply_dark_screen(scr);
+  lv_obj_set_style_pad_all(scr, 6, 0);
+  lv_obj_set_style_border_opa(scr, LV_OPA_TRANSP, 0);
+  lv_obj_set_style_outline_opa(scr, LV_OPA_TRANSP, 0);
+  lv_obj_set_style_shadow_opa(scr, LV_OPA_TRANSP, 0);
+
+  // Grid: 3 Spalten (links, Mitte, rechts), 5 Zeilen
+  static lv_coord_t cols[] = {180, 96, 86, LV_GRID_TEMPLATE_LAST};
+  static lv_coord_t rows[] = {46, 46, 44, 26, 32, LV_GRID_TEMPLATE_LAST};
+  lv_obj_set_grid_dsc_array(scr, cols, rows);
+
+  // ==== TYPE ====
+  lv_obj_t *lblType = lv_label_create(scr);
+  lv_label_set_text(lblType, "TYPE:");
+  lv_obj_set_grid_cell(lblType, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_START, 0, 1);
+  clear_chrome(lblType);
+
+  roller = lv_roller_create(scr);
+  lv_roller_set_options(roller, "PLA\nPLA+\nPETG\nABS\nASA\nTPU\nPA-CF\nPET-CF", LV_ROLLER_MODE_NORMAL);
+  // col 0..1 (span 2), row 0
+  lv_obj_set_grid_cell(roller, LV_GRID_ALIGN_START, 0, 2, LV_GRID_ALIGN_START, 0, 1);
+  lv_obj_set_style_pad_hor(roller, 6, 0);
+  clear_chrome(roller);
+
+  // ==== TIME (HH:MM:SS) ====
+  lv_obj_t *lblTime = lv_label_create(scr);
+  lv_label_set_text(lblTime, "TIME:");
+  lv_obj_set_grid_cell(lblTime, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_START, 1, 1);
+  clear_chrome(lblTime);
+
+  // Container für 3 Spinboxen + ":" in der mittleren Spalte
+  lv_obj_t *timeRow = lv_obj_create(scr);
+  lv_obj_set_grid_cell(timeRow, LV_GRID_ALIGN_START, 1, 1, LV_GRID_ALIGN_START, 1, 1);
+  clear_chrome(timeRow);
+  static lv_coord_t tcols[] = {40, 10, 40, 10, 40, LV_GRID_TEMPLATE_LAST};
+  static lv_coord_t trows[] = {LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
+  lv_obj_set_grid_dsc_array(timeRow, tcols, trows);
+  lv_obj_set_style_pad_all(timeRow, 0, 0);
+
+  auto mk_time_sb = [&](int col) -> lv_obj_t * {
+    lv_obj_t *sb = lv_spinbox_create(timeRow);
+    lv_spinbox_set_range(sb, 0, 59);
+    lv_spinbox_set_digit_format(sb, 2, 0);
+    lv_spinbox_set_step(sb, 1);
+    lv_obj_set_grid_cell(sb, LV_GRID_ALIGN_START, col, 1, LV_GRID_ALIGN_START, 0, 1);
+    clear_chrome(sb);
+    return sb;
+  };
+
+  lv_obj_t *sbH = mk_time_sb(0);
+  lv_spinbox_set_range(sbH, 0, 99); // Stunden 0..99
+
+  lv_obj_t *colon1 = lv_label_create(timeRow);
+  lv_label_set_text(colon1, ":");
+  lv_obj_set_grid_cell(colon1, LV_GRID_ALIGN_START, 1, 1, LV_GRID_ALIGN_START, 0, 1);
+  clear_chrome(colon1);
+
+  lv_obj_t *sbM = mk_time_sb(2);
+
+  lv_obj_t *colon2 = lv_label_create(timeRow);
+  lv_label_set_text(colon2, ":");
+  lv_obj_set_grid_cell(colon2, LV_GRID_ALIGN_START, 3, 1, LV_GRID_ALIGN_START, 0, 1);
+  clear_chrome(colon2);
+
+  lv_obj_t *sbS = mk_time_sb(4);
+
+  // ==== TEMP ====
+  lv_obj_t *lblTemp = lv_label_create(scr);
+  lv_label_set_text(lblTemp, "TEMP:");
+  lv_obj_set_grid_cell(lblTemp, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_START, 2, 1);
+  clear_chrome(lblTemp);
+
+  spnTemp = lv_spinbox_create(scr);
+  lv_spinbox_set_range(spnTemp, 0, 150);
+  lv_spinbox_set_digit_format(spnTemp, 3, 0);
+  lv_spinbox_set_step(spnTemp, 1);
+  lv_obj_set_grid_cell(spnTemp, LV_GRID_ALIGN_START, 1, 1, LV_GRID_ALIGN_START, 2, 1);
+  clear_chrome(spnTemp);
+
+  // ==== Rechte Spalte: START / PAUSE / CANCEL ====
+  auto mk_btn = [&](const char *txt, int row) -> lv_obj_t * {
+    lv_obj_t *b = lv_btn_create(scr);
+    lv_obj_set_grid_cell(b, LV_GRID_ALIGN_START, 2, 1, LV_GRID_ALIGN_START, row, 1);
+    clear_chrome(b);
+    lv_obj_t *l = lv_label_create(b);
+    lv_label_set_text(l, txt);
+    lv_obj_center(l);
+    return b;
+  };
+  lv_obj_t *btnStart = mk_btn("START", 0);
+  lv_obj_t *btnPause = mk_btn("PAUSE", 1);
+  lv_obj_t *btnCancel = mk_btn("CANCEL", 2);
+  LV_UNUSED(btnStart);
+  LV_UNUSED(btnPause);
+  LV_UNUSED(btnCancel);
+
+  // ==== Mittlere Aktionsfläche 2x3 ====
+  lv_obj_t *mid = lv_obj_create(scr);
+  lv_obj_set_grid_cell(mid, LV_GRID_ALIGN_START, 1, 1, LV_GRID_ALIGN_START, 3, 1);
+  clear_chrome(mid);
+  static lv_coord_t mcols[] = {LV_GRID_FR(1), 8, LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
+  static lv_coord_t mrows[] = {18, 8, 18, 8, 18, LV_GRID_TEMPLATE_LAST};
+  lv_obj_set_grid_dsc_array(mid, mcols, mrows);
+  lv_obj_set_style_pad_all(mid, 0, 0);
+
+  auto mk_mid_btn = [&](const char *txt, int c, int r) -> lv_obj_t * {
+    lv_obj_t *b = lv_btn_create(mid);
+    lv_obj_set_grid_cell(b, LV_GRID_ALIGN_START, c, 1, LV_GRID_ALIGN_START, r, 1);
+    clear_chrome(b);
+    lv_obj_t *l = lv_label_create(b);
+    lv_label_set_text(l, txt);
+    lv_obj_center(l);
+    return b;
+  };
+  mk_mid_btn("FAN1", 0, 0);
+  mk_mid_btn("FAN2", 2, 0);
+  mk_mid_btn("MOTOR", 0, 2);
+  mk_mid_btn("HEATER", 2, 2);
+  mk_mid_btn("zzz", 0, 4);
+  mk_mid_btn("aaa", 2, 4);
+
+  // ==== Log-Bar unten (über volle Breite) ====
+  lv_obj_t *logbar = lv_obj_create(scr);
+  lv_obj_set_grid_cell(logbar, LV_GRID_ALIGN_START, 0, 3, LV_GRID_ALIGN_START, 4, 1);
+  clear_chrome(logbar);
+  lv_obj_set_style_bg_opa(logbar, LV_OPA_20, 0);
+  lv_obj_set_style_bg_color(logbar, lv_palette_lighten(LV_PALETTE_GREY, 3), 0);
+  lv_obj_set_style_pad_hor(logbar, 6, 0);
+  lv_obj_set_style_pad_ver(logbar, 2, 0);
+
+  lv_obj_t *log1 = lv_label_create(logbar);
+  lv_label_set_text(log1, "Log/Info Zeile 1");
+  lv_obj_align(log1, LV_ALIGN_TOP_LEFT, 2, 0);
+  clear_chrome(log1);
+
+  lv_obj_t *log2 = lv_label_create(logbar);
+  lv_label_set_text(log2, "Log/Info Zeile 2");
+  lv_obj_align(log2, LV_ALIGN_BOTTOM_LEFT, 2, 0);
+  clear_chrome(log2);
+
+  // ===== Statuslabels (optional) =====
+  lblPos = make_label(scr, "pos: 0", LV_ALIGN_TOP_LEFT, 8, 24);
+  lblStep = make_label(scr, "step: 1", LV_ALIGN_TOP_LEFT, 8, 36);
+  lblClick = make_label(scr, "click: -", LV_ALIGN_TOP_LEFT, 8, 48);
+
+  // Fokus-Gruppe
+  group = lv_group_get_default();
+  if (!group) {
+    group = lv_group_create();
+    lv_group_set_default(group);
+  }
+  lv_group_add_obj(group, roller);
+  lv_group_add_obj(group, sbH);
+  lv_group_add_obj(group, sbM);
+  lv_group_add_obj(group, sbS);
+  lv_group_add_obj(group, spnTemp);
+  lv_group_add_obj(group, btnStart);
+  lv_group_add_obj(group, btnPause);
+  lv_group_add_obj(group, btnCancel);
+
+  lv_group_focus_obj(roller);
+  lv_scr_load(scr);
+
+  set_step_label(1);
+  set_click_label("click: -");
+  Serial.println("UI init done.");
+}
+
+// WICHTIG: genau 1x update+poll je Loop
+void ui_task() {
+  rs.update();
+
+  // --- 1) Intent-first -----------------------------------------------------
+  bool sc = false, dc = false, lc = false;
+
+  if (rs.wasDoubleClicked()) {
+    dc = true;
+    set_click_label("DoubleClick");
+    Serial.println("DoubleClick");
+
+  } else if (rs.wasLongClicked()) {
+    lc = true;
+    set_click_label("LongClick");
+    Serial.println("LongClick");
+
+  } else if (rs.wasShortClicked()) {
+    sc = true;
+    set_click_label("ShortClick");
+    Serial.println("ShortClick");
+
+    // Fokus-Click an das aktuell fokussierte Widget weiterreichen
+    if (group) {
+      lv_obj_t *f = lv_group_get_focused(group);
+      if (f) {
+        // LVGL 8/9: Objekt-Event senden
+        lv_obj_send_event(f, LV_EVENT_CLICKED, NULL);
+      }
+    }
+  }
+
+  // --- 2) Bewegung (Rotation) nur über pollPositionChange ------------------
+  long newPos;
+  if (rs.pollPositionChange(newPos)) {
+    // diff VOR dem Aktualisieren berechnen
+    long diff = 0;
+    if (s_lastPosShown != LONG_MIN) {
+      diff = newPos - s_lastPosShown;
+    }
+
+    // Label aktualisieren
+    set_pos_label(newPos);
+
+    // Falls es einen echten Schritt gab: auf das fokussierte Widget anwenden
+    if (diff != 0) {
+      // Richtung + Anzahl Schritte
+      const int steps = (diff > 0) ? (int)diff : (int)(-diff);
+      const int8_t unit = (diff > 0) ? +1 : -1;
+
+      // Trage jeden Schritt einzeln ins UI weiter (robust bei größerem diff)
+      for (int i = 0; i < steps; ++i) {
+        // Deine vorhandene Funktion; falls sie anders heißt, entsprechend anpassen:
+        apply_step_to_focused(unit);
+      }
+    }
+
+    // Merker zuletzt setzen
+    s_lastPosShown = newPos;
+
+    // Konsolidiertes Bewegungs-Log
+    Serial.printf("ENC pos=%ld diff=%ld S=%d D=%d L=%d\n", newPos, (long)diff, (int)sc, (int)dc, (int)lc);
+  }
+
+  // --- 3) Optional: Low-level Edges (bei Bedarf) ---------------------------
+  // if (rs.wasPressed())  Serial.println("PRESS");
+  // if (rs.wasReleased()) Serial.println("RELEASE");
+}

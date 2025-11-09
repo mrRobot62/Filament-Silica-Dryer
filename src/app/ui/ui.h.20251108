@@ -1,0 +1,6 @@
+#pragma once
+#include <lvgl.h>
+
+// Public UI API
+void ui_init();   // build LVGL widgets + init RotarySwitch
+void ui_task();   // call once per loop (does one rs.update() + handling)

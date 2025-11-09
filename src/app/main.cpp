@@ -91,7 +91,6 @@ void setup() {
 
 void loop() {
   // Genau EIN Poll + UI-Update (inkl. Logging) pro Zyklus
-  ui_task();
   // LVGL Tick (ca. alle 5 ms)
   static uint32_t last_ms = millis();
   uint32_t now = millis();
@@ -100,8 +99,8 @@ void loop() {
     lv_tick_inc(diff);
     last_ms = now;
   }
-  // LVGL verarbeiten
-  lv_timer_handler();
+
+  ui_task();
 
   delay(1);
 }
