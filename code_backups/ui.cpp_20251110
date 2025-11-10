@@ -1,0 +1,350 @@
+#include "ui.h"
+#include "../pins.h"
+#include "ui_events.h"
+
+#include <Arduino.h>
+#include <lvgl.h>
+
+// ============================== Encoder ==============================
+static RotarySwitch rs(ENC_PIN_A, ENC_PIN_B, ENC_PIN_SW);
+static long lastPosShown = LONG_MIN;
+
+// ------------------------------------------------------------
+// Fonts (müssen in lv_conf.h aktiviert sein)
+// ------------------------------------------------------------
+LV_FONT_DECLARE(lv_font_montserrat_12);
+LV_FONT_DECLARE(lv_font_montserrat_16);
+LV_FONT_DECLARE(lv_font_montserrat_18);
+LV_FONT_DECLARE(lv_font_montserrat_20);
+
+// ------------------------------------------------------------
+// Interner UI-Kontext
+// ------------------------------------------------------------
+static UiContext g_ui;
+
+// Getter für Event-Layer
+UiContext *ui_get() {
+  return &g_ui;
+}
+
+// ------------------------------------------------------------
+// Helper
+// ------------------------------------------------------------
+
+static inline void no_chrome(lv_obj_t *o) {
+  lv_obj_clear_flag(o, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_style_border_opa(o, LV_OPA_TRANSP, 0);
+  lv_obj_set_style_outline_opa(o, LV_OPA_TRANSP, 0);
+  lv_obj_set_style_shadow_opa(o, LV_OPA_TRANSP, 0);
+}
+
+// LED-Style (nur Form + Glow, Helligkeit macht Event-Layer)
+static inline void style_led(lv_obj_t *led, lv_color_t color, lv_coord_t size = 18) {
+  lv_obj_set_size(led, size, size);
+  lv_obj_set_style_radius(led, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+
+  lv_obj_set_style_border_width(led, 2, LV_PART_MAIN);
+  lv_obj_set_style_border_color(led, lv_palette_lighten(LV_PALETTE_GREY, 2), LV_PART_MAIN);
+  lv_obj_set_style_border_opa(led, LV_OPA_80, LV_PART_MAIN);
+
+  lv_obj_set_style_shadow_width(led, size / 2 + 4, LV_PART_MAIN);
+  lv_obj_set_style_shadow_spread(led, 0, LV_PART_MAIN);
+  lv_obj_set_style_shadow_color(led, color, LV_PART_MAIN);
+  lv_obj_set_style_shadow_opa(led, LV_OPA_60, LV_PART_MAIN);
+
+  lv_obj_clear_flag(led, LV_OBJ_FLAG_SCROLLABLE);
+}
+
+// ON/OFF mit Farbe abdunkeln und Glow steuern
+static inline void set_led_state(lv_obj_t *led, lv_color_t baseColor, bool on) {
+  if (on) {
+    lv_color_t onColor = baseColor;
+    lv_obj_set_style_shadow_opa(led, LV_OPA_80, LV_PART_MAIN);
+    lv_led_set_color(led, onColor);
+    lv_led_on(led);
+    lv_led_set_brightness(led, 255);
+  } else {
+    // Stark abgedunkelte Farbe
+    lv_color_t offColor = lv_color_mix(lv_color_black(), baseColor, 30);
+    lv_obj_set_style_shadow_opa(led, LV_OPA_10, LV_PART_MAIN);
+    lv_led_set_color(led, offColor);
+    lv_led_off(led);
+    lv_led_set_brightness(led, 0);
+  }
+}
+
+static inline lv_obj_t *mk_led(lv_obj_t *p, lv_color_t color = lv_color_hex(0x00ff22), bool state = false,
+                               int size = 18) {
+  lv_obj_t *led = lv_led_create(p);
+  lv_led_set_color(led, color);
+  style_led(led, color, size);
+  set_led_state(led, color, state);
+  return led;
+}
+
+static inline lv_obj_t *mk_label(lv_obj_t *p, const char *txt, bool recolor = true) {
+  lv_obj_t *l = lv_label_create(p);
+  if (recolor)
+    lv_label_set_recolor(l, true);
+  lv_label_set_text(l, txt);
+  lv_obj_set_style_text_font(l, &lv_font_montserrat_16, LV_PART_MAIN);
+  no_chrome(l);
+  return l;
+}
+
+static inline lv_obj_t *mk_circular_info_text(lv_obj_t *p, const char *txt, int w = 300) {
+  lv_obj_t *l = lv_label_create(p);
+  lv_label_set_long_mode(l, LV_LABEL_LONG_MODE_SCROLL_CIRCULAR);
+  lv_label_set_recolor(l, true);
+  lv_label_set_text(l, txt);
+  lv_obj_set_style_text_font(l, &lv_font_montserrat_18, LV_PART_MAIN);
+  lv_obj_set_width(l, w);
+  return l;
+}
+
+static inline lv_obj_t *mk_btn(lv_obj_t *p, const char *txt, lv_coord_t w, lv_coord_t h) {
+  lv_obj_t *b = lv_btn_create(p);
+  no_chrome(b);
+  lv_obj_set_size(b, w, h);
+
+  lv_obj_t *t = lv_label_create(b);
+  lv_label_set_text(t, txt);
+  lv_obj_set_style_text_font(t, &lv_font_montserrat_16, LV_PART_MAIN);
+  lv_obj_center(t);
+  return b;
+}
+
+static inline void dark_screen(lv_obj_t *s) {
+  lv_obj_set_style_bg_color(s, lv_color_black(), 0);
+  lv_obj_set_style_bg_opa(s, LV_OPA_COVER, 0);
+}
+
+// ------------------------------------------------------------
+// Layout / Widgets
+// ------------------------------------------------------------
+
+void build_widgets() {
+  UiContext &ui = g_ui;
+
+  // Aktiven Screen holen und leeren
+  ui.scr = lv_scr_act(); // statt neuen Screen erzeugen
+  lv_obj_clean(ui.scr);  // alles runter (inkl. "LVGL ready")
+  dark_screen(ui.scr);   // unseren Hintergrund setzen
+
+  // Auflösung vom Display holen
+  lv_disp_t *disp = lv_disp_get_default();
+  const int DISP_W = lv_disp_get_hor_res(disp);
+  const int DISP_H = lv_disp_get_ver_res(disp);
+
+  const int PAD_X = 8;
+  const int PAD_Y = 3;
+  const int INPUT_X = 55;
+  const int INPUT_HEIGHT = 40;
+  const int INPUT_HEIGHT_DIST = 5;
+
+  const int LBL_ROW_1 = PAD_Y + 10;
+  const int LBL_ROW_2 = LBL_ROW_1 + 45;
+  const int LBL_ROW_3 = LBL_ROW_2 + 45;
+
+  const int TYPE_ROLLER_W = 160;
+  const int TYPE_ROLLER_H = INPUT_HEIGHT;
+  const int TYPE_INPUT_Y = PAD_Y;
+
+  const int TIME_SP_W = 35;
+  const int TIME_SP_H = INPUT_HEIGHT;
+  const int TIME_INPUT_Y = TYPE_INPUT_Y + INPUT_HEIGHT + INPUT_HEIGHT_DIST;
+  const int TIME_INPUT_HH = INPUT_X;
+  const int TIME_INPUT_MM = TIME_INPUT_HH + TIME_SP_W + 15;
+  const int TIME_INPUT_SS = TIME_INPUT_MM + TIME_SP_W + 15;
+
+  const int TEMP_SP_W = 50;
+  const int TEMP_SP_H = INPUT_HEIGHT;
+  const int TEMP_INPUT_Y = TIME_INPUT_Y + INPUT_HEIGHT + INPUT_HEIGHT_DIST;
+
+  const int RIGHT_BTN_CONTAINER_X = 240;
+  const int RIGHT_BTN_CONTAINER_Y = PAD_Y;
+  const int BTN_W = 70;
+  const int BTN_H = 25;
+  const int BTN_PADDING = 5;
+
+  const int BTN_ROW1_Y = RIGHT_BTN_CONTAINER_Y;
+  const int BTN_ROW2_Y = BTN_ROW1_Y + BTN_H + BTN_PADDING;
+  const int BTN_ROW3_Y = BTN_ROW2_Y + BTN_H + BTN_PADDING;
+
+  const int LOGBAR_W = DISP_W - (PAD_X * 2);
+  const int LOGBAR_H = 34;
+  const int LOGBAR_Y = DISP_H - LOGBAR_H;
+
+  const int LED_LBL_X = 140;
+  const int LED_LBL_X_OFFSET = 30;
+  const int LED_LBL_Y = LBL_ROW_3 - 8;
+
+  // -------------------- TYPE --------------------
+  ui.lblType = mk_label(ui.scr, "TYPE:");
+  lv_obj_set_pos(ui.lblType, PAD_X, LBL_ROW_1);
+
+  ui.rollerType = lv_roller_create(ui.scr);
+  no_chrome(ui.rollerType);
+  lv_obj_set_size(ui.rollerType, TYPE_ROLLER_W, TYPE_ROLLER_H);
+  lv_obj_set_pos(ui.rollerType, INPUT_X, TYPE_INPUT_Y);
+  lv_roller_set_options(ui.rollerType, "PLA\nPLA+\nPETG\nABS\nASA\nTPU", LV_ROLLER_MODE_INFINITE);
+  lv_roller_set_visible_row_count(ui.rollerType, 1);
+  lv_obj_set_style_text_font(ui.rollerType, &lv_font_montserrat_18, LV_PART_MAIN);
+
+  // -------------------- TIME --------------------
+  ui.lblTime = mk_label(ui.scr, "TIME:");
+  lv_obj_set_pos(ui.lblTime, PAD_X, LBL_ROW_2);
+
+  auto mk_sb = [&](lv_coord_t x, lv_coord_t y, lv_coord_t w, int digits = 2) -> lv_obj_t * {
+    lv_obj_t *sb = lv_spinbox_create(ui.scr);
+    no_chrome(sb);
+    lv_spinbox_set_digit_format(sb, digits, 0);
+    lv_spinbox_set_step(sb, 1);
+    lv_obj_set_style_text_font(sb, &lv_font_montserrat_18, LV_PART_MAIN);
+    lv_obj_set_size(sb, w, TIME_SP_H);
+    lv_obj_set_pos(sb, x, y);
+    return sb;
+  };
+
+  lv_obj_t *dp1 = mk_label(ui.scr, "#FFFFFF :#");
+  lv_obj_t *dp2 = mk_label(ui.scr, "#FFFFFF :#");
+
+  ui.sbHH = mk_sb(TIME_INPUT_HH, TIME_INPUT_Y, TIME_SP_W);
+  lv_spinbox_set_range(ui.sbHH, 0, 99);
+  lv_obj_set_pos(dp1, TIME_INPUT_HH + TIME_SP_W + 5, LBL_ROW_2);
+
+  ui.sbMM = mk_sb(TIME_INPUT_MM, TIME_INPUT_Y, TIME_SP_W);
+  lv_spinbox_set_range(ui.sbMM, 0, 59);
+  lv_obj_set_pos(dp2, TIME_INPUT_MM + TIME_SP_W + 5, LBL_ROW_2);
+
+  ui.sbSS = mk_sb(TIME_INPUT_SS, TIME_INPUT_Y, TIME_SP_W);
+  lv_spinbox_set_range(ui.sbSS, 0, 59);
+
+  // -------------------- TEMP --------------------
+  ui.lblTemp = mk_label(ui.scr, "TEMP:");
+  lv_obj_set_pos(ui.lblTemp, PAD_X, LBL_ROW_3);
+
+  ui.sbTemp = mk_sb(INPUT_X, TEMP_INPUT_Y, TEMP_SP_W, 3);
+  lv_spinbox_set_range(ui.sbTemp, 0, 120);
+
+  lv_obj_t *tUnit = mk_label(ui.scr, "#FFFFFF °C#");
+  lv_obj_set_pos(tUnit, INPUT_X + TEMP_SP_W + 5, LBL_ROW_3 - 4);
+
+  // -------------------- Buttons rechts --------------------
+  ui.btnStart = mk_btn(ui.scr, "START", BTN_W, BTN_H);
+  ui.btnPause = mk_btn(ui.scr, "PAUSE", BTN_W, BTN_H);
+  ui.btnCancel = mk_btn(ui.scr, "CANCEL", BTN_W, BTN_H);
+
+  lv_obj_set_pos(ui.btnStart, RIGHT_BTN_CONTAINER_X, BTN_ROW1_Y);
+  lv_obj_set_pos(ui.btnPause, RIGHT_BTN_CONTAINER_X, BTN_ROW2_Y);
+  lv_obj_set_pos(ui.btnCancel, RIGHT_BTN_CONTAINER_X, BTN_ROW3_Y);
+
+  // -------------------- LEDs --------------------
+  ui.ledLblF1 = mk_label(ui.scr, "F1");
+  ui.ledLblF2 = mk_label(ui.scr, "F2");
+  ui.ledLblMtr = mk_label(ui.scr, "MTR");
+  ui.ledLblHtr = mk_label(ui.scr, "HTR");
+  ui.ledLblDoor = mk_label(ui.scr, "DOOR");
+
+  ui.ledFan1 = mk_led(ui.scr, lv_color_hex(0x00FF22), false, 18);
+  ui.ledFan2 = mk_led(ui.scr, lv_color_hex(0x00FF22), false, 18);
+  ui.ledMotor = mk_led(ui.scr, lv_color_hex(0x00FF22), false, 18);
+  ui.ledHeater = mk_led(ui.scr, lv_color_hex(0x00FF22), false, 18);
+  ui.ledDoor = mk_led(ui.scr, lv_color_hex(0xFF0000), true, 18);
+
+  lv_obj_set_pos(ui.ledLblF1, LED_LBL_X + LED_LBL_X_OFFSET * 0, LED_LBL_Y);
+  lv_obj_set_pos(ui.ledLblF2, LED_LBL_X + LED_LBL_X_OFFSET * 1, LED_LBL_Y);
+  lv_obj_set_pos(ui.ledLblMtr, LED_LBL_X + LED_LBL_X_OFFSET * 2, LED_LBL_Y);
+  lv_obj_set_pos(ui.ledLblHtr, LED_LBL_X + LED_LBL_X_OFFSET * 3, LED_LBL_Y);
+  lv_obj_set_pos(ui.ledLblDoor, LED_LBL_X + LED_LBL_X_OFFSET * 4, LED_LBL_Y);
+
+  lv_obj_set_pos(ui.ledFan1, LED_LBL_X + LED_LBL_X_OFFSET * 0, LED_LBL_Y + 15);
+  lv_obj_set_pos(ui.ledFan2, LED_LBL_X + LED_LBL_X_OFFSET * 1, LED_LBL_Y + 15);
+  lv_obj_set_pos(ui.ledMotor, LED_LBL_X + LED_LBL_X_OFFSET * 2, LED_LBL_Y + 15);
+  lv_obj_set_pos(ui.ledHeater, LED_LBL_X + LED_LBL_X_OFFSET * 3, LED_LBL_Y + 15);
+  lv_obj_set_pos(ui.ledDoor, LED_LBL_X + LED_LBL_X_OFFSET * 4, LED_LBL_Y + 15);
+
+  // -------------------- Log-Bar unten --------------------
+  lv_obj_t *logbar = lv_obj_create(ui.scr);
+  no_chrome(logbar);
+  lv_obj_set_size(logbar, LOGBAR_W, LOGBAR_H);
+  lv_obj_set_pos(logbar, PAD_X, LOGBAR_Y);
+  lv_obj_set_style_bg_opa(logbar, LV_OPA_20, 0);
+  lv_obj_set_style_bg_color(logbar, lv_palette_lighten(LV_PALETTE_NONE, 3), 0);
+  lv_obj_set_style_pad_hor(logbar, 0, 0);
+  lv_obj_set_style_pad_ver(logbar, 1, 0);
+
+  ui.logMsg =
+      mk_circular_info_text(logbar, "#00bd19ff *** Filament-Silicat Dryer V0.1 (c) 2025 LunaX *** #", LOGBAR_W - 4);
+  lv_obj_align(ui.logMsg, LV_ALIGN_CENTER, 2, 0);
+
+  // -------------------- Fokusgruppe --------------------
+  ui.group = lv_group_get_default();
+  if (!ui.group) {
+    ui.group = lv_group_create();
+    lv_group_set_default(ui.group);
+  }
+
+  lv_group_add_obj(ui.group, ui.rollerType);
+  lv_group_add_obj(ui.group, ui.sbHH);
+  lv_group_add_obj(ui.group, ui.sbMM);
+  lv_group_add_obj(ui.group, ui.sbSS);
+  lv_group_add_obj(ui.group, ui.sbTemp);
+  lv_group_add_obj(ui.group, ui.btnStart);
+  lv_group_add_obj(ui.group, ui.btnPause);
+  lv_group_add_obj(ui.group, ui.btnCancel);
+
+  lv_group_focus_obj(ui.rollerType);
+
+  // Screen anzeigen
+  // lv_scr_load(ui.scr);
+}
+
+// ------------------------------------------------------------
+// Public API
+// ------------------------------------------------------------
+
+void ui_init() {
+  // RotarySwitch: klare, reproduzierbare Timings
+  rs.begin(true);
+  rs.setDebounceMs(15);
+  rs.setDoubleClickWindowMs(300);
+  rs.setLongClickMs(1500);
+  rs.setStep(1);
+  rs.setReverseDirection(false); // CW = positiv
+  rs.setButtonActiveLow(false);  // dein Board: pressed = HIGH
+
+  build_widgets(); // komplette UI erzeugen
+  Serial.println("UI init done.");
+}
+
+void ui_task() {
+  rs.update(); // nur noch Encoder updaten
+
+  // 1) Intent-first – NUR RotarySwitch-Original-APIs
+  if (rs.wasDoubleClicked()) {
+    Serial.println("DoubleClick");
+  } else if (rs.wasLongClicked()) {
+    Serial.println("LongClick");
+  } else if (rs.wasShortClicked()) {
+    Serial.println("ShortClick");
+    if (ui.group) {
+      lv_obj_t *f = lv_group_get_focused(group);
+      if (f)
+        lv_obj_send_event(f, LV_EVENT_CLICKED, NULL);
+    }
+  }
+
+  // 2) Bewegung – NUR pollPositionChange(...)
+  long newPos;
+  if (rs.pollPositionChange(newPos)) {
+    if (newPos != lastPosShown) {
+      lastPosShown = newPos;
+    }
+    int8_t step = (newPos > lastPosShown) ? +1 : -1;
+    apply_step_to_focused(step);
+    Serial.printf("ENC: %d\n", (int)newPos);
+  }
+
+  // Optional: Low-level Edges könntest du bei Bedarf wieder dazunehmen
+} //

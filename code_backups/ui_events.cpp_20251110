@@ -1,0 +1,192 @@
+
+#include <Arduino.h>
+#include <RotarySwitch.h>
+#include <lvgl.h>
+
+#include "../pins.h"
+#include "ui.h"
+#include "ui_events.h"
+
+// ------------------------------------------------------------
+// Encoder (RotarySwitch) – reine Event-Logik
+// ------------------------------------------------------------
+static RotarySwitch rs(ENC_PIN_A, ENC_PIN_B, ENC_PIN_SW);
+static long s_lastPos = LONG_MIN;
+
+// ------------------------------------------------------------
+// LVGL-Callbacks für Widgets
+// ------------------------------------------------------------
+
+static void roller_type_cb(lv_event_t *e) {
+  if (lv_event_get_code(e) != LV_EVENT_VALUE_CHANGED)
+    return;
+
+  lv_obj_t *roller = (lv_obj_t *)lv_event_get_target(e);
+  char buf[32];
+  lv_roller_get_selected_str(roller, buf, sizeof(buf));
+  Serial.printf("FILAMENT: %s\n", buf);
+}
+
+static void spin_time_cb(lv_event_t *e) {
+  if (lv_event_get_code(e) != LV_EVENT_VALUE_CHANGED)
+    return;
+
+  lv_obj_t *sb = (lv_obj_t *)lv_event_get_target(e);
+  int32_t v = lv_spinbox_get_value(sb);
+  Serial.printf("TIME SPIN: %ld\n", (long)v);
+}
+
+static void spin_temp_cb(lv_event_t *e) {
+  if (lv_event_get_code(e) != LV_EVENT_VALUE_CHANGED)
+    return;
+
+  lv_obj_t *sb = (lv_obj_t *)lv_event_get_target(e);
+  int32_t v = lv_spinbox_get_value(sb);
+  Serial.printf("TEMP: %ld\n", (long)v);
+}
+
+static void btn_start_cb(lv_event_t *e) {
+  if (lv_event_get_code(e) != LV_EVENT_CLICKED)
+    return;
+  Serial.println("START clicked");
+}
+
+static void btn_pause_cb(lv_event_t *e) {
+  if (lv_event_get_code(e) != LV_EVENT_CLICKED)
+    return;
+  Serial.println("PAUSE clicked");
+}
+
+static void btn_cancel_cb(lv_event_t *e) {
+  if (lv_event_get_code(e) != LV_EVENT_CLICKED)
+    return;
+  Serial.println("CANCEL clicked");
+}
+
+// ------------------------------------------------------------
+// Encoder → Fokus-Widget
+// ------------------------------------------------------------
+
+static void apply_step_to_focused(int8_t step) {
+  UiContext *ui = ui_get();
+  if (!ui || !ui->group)
+    return;
+
+  lv_obj_t *f = lv_group_get_focused(ui->group);
+  if (!f)
+    return;
+
+  auto spin_step = [&](lv_obj_t *sb) {
+    if (!sb)
+      return;
+    int n = (step > 0) ? step : -step;
+    for (int i = 0; i < n; ++i) {
+      if (step > 0)
+        lv_spinbox_increment(sb);
+      else
+        lv_spinbox_decrement(sb);
+    }
+  };
+
+  if (f == ui->sbHH || f == ui->sbMM || f == ui->sbSS || f == ui->sbTemp) {
+    spin_step(f);
+  } else if (f == ui->rollerType) {
+    int sel = lv_roller_get_selected(ui->rollerType);
+    int cnt = lv_roller_get_option_cnt(ui->rollerType);
+    sel += step;
+    if (sel < 0)
+      sel = 0;
+    if (sel >= cnt)
+      sel = cnt - 1;
+    lv_roller_set_selected(ui->rollerType, sel, LV_ANIM_OFF);
+  } else {
+    // Buttons o. ä.: Drehung ignorieren
+  }
+}
+
+// ------------------------------------------------------------
+// Init & Task
+// ------------------------------------------------------------
+
+void ui_events_init() {
+  UiContext *ui = ui_get();
+  if (!ui)
+    return;
+
+  // RotarySwitch: stabile Parameter
+  rs.begin(true);
+  rs.setDebounceMs(15);
+  rs.setDoubleClickWindowMs(300);
+  rs.setLongClickMs(1500);
+  rs.setStep(1);
+  rs.setReverseDirection(false); // CW = positiv
+  rs.setButtonActiveLow(false);  // dein Board: pressed = HIGH
+
+  // LVGL-Events verbinden
+  if (ui->rollerType)
+    lv_obj_add_event_cb(ui->rollerType, roller_type_cb, LV_EVENT_VALUE_CHANGED, nullptr);
+
+  if (ui->sbHH)
+    lv_obj_add_event_cb(ui->sbHH, spin_time_cb, LV_EVENT_VALUE_CHANGED, (void *)"HH");
+  if (ui->sbMM)
+    lv_obj_add_event_cb(ui->sbMM, spin_time_cb, LV_EVENT_VALUE_CHANGED, (void *)"MM");
+  if (ui->sbSS)
+    lv_obj_add_event_cb(ui->sbSS, spin_time_cb, LV_EVENT_VALUE_CHANGED, (void *)"SS");
+
+  if (ui->sbTemp)
+    lv_obj_add_event_cb(ui->sbTemp, spin_temp_cb, LV_EVENT_VALUE_CHANGED, nullptr);
+
+  if (ui->btnStart)
+    lv_obj_add_event_cb(ui->btnStart, btn_start_cb, LV_EVENT_CLICKED, nullptr);
+  if (ui->btnPause)
+    lv_obj_add_event_cb(ui->btnPause, btn_pause_cb, LV_EVENT_CLICKED, nullptr);
+  if (ui->btnCancel)
+    lv_obj_add_event_cb(ui->btnCancel, btn_cancel_cb, LV_EVENT_CLICKED, nullptr);
+
+  s_lastPos = LONG_MIN;
+}
+
+// WICHTIG: genau 1x pro loop() aufrufen
+void ui_events_task() {
+  UiContext *ui = ui_get();
+  if (!ui)
+    return;
+
+  rs.update();
+
+  // Intent-first: Klicks
+  if (rs.wasDoubleClicked()) {
+    Serial.println("DoubleClick");
+    // optional: Sonderfunktion
+  } else if (rs.wasLongClicked()) {
+    Serial.println("LongClick");
+    if (ui->group) {
+      lv_obj_t *f = lv_group_get_focused(ui->group);
+      if (f)
+        lv_obj_send_event(f, LV_EVENT_LONG_PRESSED, nullptr);
+    }
+  } else if (rs.wasShortClicked()) {
+    Serial.println("ShortClick");
+    if (ui->group) {
+      lv_obj_t *f = lv_group_get_focused(ui->group);
+      if (f)
+        lv_obj_send_event(f, LV_EVENT_CLICKED, nullptr);
+    }
+  }
+
+  // Drehbewegung
+  long newPos;
+  if (rs.pollPositionChange(newPos)) {
+    if (s_lastPos == LONG_MIN)
+      s_lastPos = newPos;
+
+    long diff = newPos - s_lastPos;
+    if (diff != 0) {
+      int steps = (diff > 0) ? diff : -diff;
+      int8_t unit = (diff > 0) ? +1 : -1;
+      for (int i = 0; i < steps; ++i)
+        apply_step_to_focused(unit);
+      s_lastPos = newPos;
+    }
+  }
+}

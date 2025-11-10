@@ -1,0 +1,7 @@
+#pragma once
+
+/** Initialisiert RotarySwitch und registriert LVGL-Event-Callbacks. */
+void ui_events_init();
+
+/** Einmal pro loop() aufrufen, verarbeitet Encoder + Button-Events. */
+void ui_events_task();

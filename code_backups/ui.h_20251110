@@ -1,0 +1,62 @@
+#pragma once
+#include "../pins.h"
+#include <RotarySwitch.h>
+#include <lvgl.h>
+
+/**
+ * Bundle aller Widgets, auf die die Event-Logik zugreifen darf.
+ * Dieser Kontext gehört ui.cpp, wird aber über ui_get() bereitgestellt.
+ */
+struct UiContext {
+  lv_obj_t *scr = nullptr;
+
+  lv_group_t *group = nullptr;
+
+  // TYPE
+  lv_obj_t *lblType = nullptr;
+  lv_obj_t *rollerType = nullptr;
+
+  // TIME
+  lv_obj_t *lblTime = nullptr;
+  lv_obj_t *sbHH = nullptr;
+  lv_obj_t *sbMM = nullptr;
+  lv_obj_t *sbSS = nullptr;
+
+  // TEMP
+  lv_obj_t *lblTemp = nullptr;
+  lv_obj_t *sbTemp = nullptr;
+
+  // Buttons rechts
+  lv_obj_t *btnStart = nullptr;
+  lv_obj_t *btnPause = nullptr;
+  lv_obj_t *btnCancel = nullptr;
+
+  // LED-Labels
+  lv_obj_t *ledLblF1 = nullptr;
+  lv_obj_t *ledLblF2 = nullptr;
+  lv_obj_t *ledLblMtr = nullptr;
+  lv_obj_t *ledLblHtr = nullptr;
+  lv_obj_t *ledLblDoor = nullptr;
+
+  // LEDs
+  lv_obj_t *ledFan1 = nullptr;
+  lv_obj_t *ledFan2 = nullptr;
+  lv_obj_t *ledMotor = nullptr;
+  lv_obj_t *ledHeater = nullptr;
+  lv_obj_t *ledDoor = nullptr;
+
+  // Log / Info
+  lv_obj_t *logMsg = nullptr;
+};
+
+/** UI aufbauen (Screen + Widgets). Ruft intern auch die Event-Initialisierung auf. */
+void ui_init();
+
+/** Einmal pro loop() aufrufen – delegiert an die Event-Logik. */
+void ui_task();
+
+/** Zugriff auf den internen UI-Kontext (für ui_events.cpp). */
+UiContext *ui_get();
+
+/** Nur Layout erzeugen (für spätere Erweiterungen). */
+void build_widgets();
