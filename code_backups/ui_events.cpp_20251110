@@ -76,7 +76,7 @@ static void apply_step_to_focused(int8_t step) {
   if (!f)
     return;
 
-  auto spin_step = [&](lv_obj_t *sb) {
+  auto spinboxStepValue = [&](lv_obj_t *sb) {
     if (!sb)
       return;
     int n = (step > 0) ? step : -step;
@@ -88,8 +88,10 @@ static void apply_step_to_focused(int8_t step) {
     }
   };
 
+
+
   if (f == ui->sbHH || f == ui->sbMM || f == ui->sbSS || f == ui->sbTemp) {
-    spin_step(f);
+    spinboxStepValue(f);
   } else if (f == ui->rollerType) {
     int sel = lv_roller_get_selected(ui->rollerType);
     int cnt = lv_roller_get_option_cnt(ui->rollerType);

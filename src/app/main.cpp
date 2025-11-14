@@ -1,3 +1,4 @@
+#include "logging/log_ui.h"
 #include "pins.h"
 #include "ui/ui.h"
 #include "ui/ui_events.h"
@@ -41,28 +42,62 @@ static void my_disp_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px
 // You should implement the logic for these functions.
 // They are called when the corresponding event is triggered.
 
-void on_click_rolType(lv_event_t *e) {
-  // LV_LOG_USER("Function on_click_rolType called.");
-  // lv_obj_t * target = lv_event_get_target(e);
-}
-void on_change_rolType(lv_event_t *e) {
-  // LV_LOG_USER("Function on_change_rolType called.");
-  // lv_obj_t * target = lv_event_get_target(e);
-}
+// void on_click_rolType(lv_event_t *e) {
+//   // LV_LOG_USER("Function on_click_rolType called.");
+//   // lv_obj_t * target = lv_event_get_target(e);
+//   UI_INFO("on_click_rolType");
+// }
+// void on_change_rolType(lv_event_t *e) {
+//   // LV_LOG_USER("Function on_change_rolType called.");
+//   // lv_obj_t * target = lv_event_get_target(e);
+// }
 void on_click_btnStart(lv_event_t *e) {
   // LV_LOG_USER("Function on_click_btnStart called.");
   // lv_obj_t * target = lv_event_get_target(e);
+  UI_INFO("main.cpp on_click_btnStart");
 }
 void on_click_btnCancel(lv_event_t *e) {
   // LV_LOG_USER("Function on_click_btnCancel called.");
   // lv_obj_t * target = lv_event_get_target(e);
+  UI_INFO("on_click_btnCancel");
 }
 void on_click_timeHH(lv_event_t *e) {
   // LV_LOG_USER("Function on_click_timeHH called.");
   // lv_obj_t * target = lv_event_get_target(e);
+  UI_INFO("on_click_timeHH");
 }
 void on_change_timeHH(lv_event_t *e) {
   // LV_LOG_USER("Function on_change_timeHH called.");
+  // lv_obj_t * target = lv_event_get_target(e);
+}
+
+void on_click_timeMM(lv_event_t *e) {
+  // LV_LOG_USER("Function on_click_timeMM called.");
+  // lv_obj_t * target = lv_event_get_target(e);
+  UI_INFO("on_click_timeMM");
+}
+void on_change_timeMM(lv_event_t *e) {
+  // LV_LOG_USER("Function on_change_timeMM called.");
+  // lv_obj_t * target = lv_event_get_target(e);
+}
+
+void on_click_timeSS(lv_event_t *e) {
+  // LV_LOG_USER("Function on_click_timeSS called.");
+  // lv_obj_t * target = lv_event_get_target(e);
+  UI_INFO("on_click_timeSS");
+}
+void on_change_timeSS(lv_event_t *e) {
+  // LV_LOG_USER("Function on_change_timeSS called.");
+  // lv_obj_t * target = lv_event_get_target(e);
+}
+
+void on_click_temp(lv_event_t *e) {
+  // LV_LOG_USER("Function on_click_temp called.");
+  // lv_obj_t * target = lv_event_get_target(e);
+  UI_INFO("on_click_temp");
+}
+void on_change_temp(lv_event_t *e) {
+  UI_INFO("on_change_temp");
   // lv_obj_t * target = lv_event_get_target(e);
 }
 

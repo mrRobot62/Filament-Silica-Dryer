@@ -23,7 +23,7 @@ LV_FONT_DECLARE(lv_font_montserrat_20);
 static UiContext g_ui;
 
 // Getter für Event-Layer
-UiContext *ui_get() {
+UiContext * () {
   return &g_ui;
 }
 

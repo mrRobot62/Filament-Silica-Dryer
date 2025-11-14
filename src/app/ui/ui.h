@@ -13,13 +13,65 @@
 #include "RotarySwitch.h"
 #include "lvgl.h"
 
+/**
+ * Bundle von widgets die über ui_event genutzt werden können
+ */
+struct UiContext {
+  // Display
+  lv_obj_t *screen = nullptr;
+
+  // Eingabe-Widgets
+  lv_group_t *group = nullptr;
+  lv_obj_t *rollerType = nullptr;
+  lv_obj_t *spnTimeHH = nullptr;
+  lv_obj_t *spnTimeMM = nullptr;
+  lv_obj_t *spnTimeSS = nullptr;
+  lv_obj_t *spnTemp = nullptr;
+
+  // Buttons
+  lv_obj_t *btnStart = nullptr;
+  lv_obj_t *btnCancel = nullptr;
+  lv_obj_t *lblInfoMsg = nullptr;
+
+  // LED-Marker
+  lv_obj_t *ledFan1 = nullptr;   // Fan230V - Fast
+  lv_obj_t *ledFan1_L = nullptr; // Fan230V - Slow
+  lv_obj_t *ledFan12V = nullptr; // Fan12V
+  lv_obj_t *ledMotor = nullptr;  // Motor
+  lv_obj_t *ledDoor = nullptr;   // Door-Indikator
+
+  // Einfache Labels
+  lv_obj_t *lblType = nullptr;
+  lv_obj_t *lblTime = nullptr;
+  lv_obj_t *lblTimeDP1 = nullptr;
+  lv_obj_t *lblTimeDP2 = nullptr;
+  lv_obj_t *lblTemp = nullptr;
+  lv_obj_t *lblBtnStart = nullptr;
+  lv_obj_t *lblBtnCancel = nullptr;
+};
+
+enum class UiFocusTarget {
+  None,
+  TimeHH,
+  TimeMM,
+  TimeSS,
+  Temp,
+  TypeRoller,
+  BtnStart,
+  BtnPause,
+  BtnCancel,
+};
+
 // Screen externs
-extern lv_obj_t *ui_Screen1;
+extern lv_obj_t *ui_main_screen;
+extern UiContext *ui_get();
 
 // Widget externs
 extern lv_obj_t *ui_rolType;
 extern lv_obj_t *ui_spnTimeHH;
 extern lv_obj_t *ui_spnTimeMM;
+extern lv_obj_t *ui_spnTimeSS;
+extern lv_obj_t *ui_spnTemp;
 
 // Function declarations for event callbacks
 void ui_init(void);
