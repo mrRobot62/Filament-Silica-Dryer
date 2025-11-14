@@ -53,21 +53,21 @@ LV_FONT_DECLARE(lv_font_montserrat_20);
 ////////////////////////////////////////
 // EVENT FORWARD DECLARATIONS
 ////////////////////////////////////////
-void on_rolType_Clicked(lv_event_t *e);
-void on_rolType_Focused(lv_event_t *e);
-void on_rolType_ValueChanged(lv_event_t *e);
 void on_btnStart_Clicked(lv_event_t *e);
-void on_btnStart_Focused(lv_event_t *e);
-void on_btnCancel_Focused(lv_event_t *e);
 void on_btnCancel_Clicked(lv_event_t *e);
-void on_spnTimeHH_Clicked(lv_event_t *e);
-void on_spnTimeHH_ValueChanged(lv_event_t *e);
-void on_spnTimeMM_Clicked(lv_event_t *e);
-void on_spnTimeMM_ValueChanged(lv_event_t *e);
-void on_spnTimeSS_Clicked(lv_event_t *e);
-void on_spnTimeSS_ValueChanged(lv_event_t *e);
-void on_spnTemp_Clicked(lv_event_t *e);
-void on_spnTemp_ValueChanged(lv_event_t *e);
+// void on_btnStart_Focused(lv_event_t *e);
+// void on_btnCancel_Focused(lv_event_t *e);
+//  void on_rolType_Clicked(lv_event_t *e);
+//  void on_rolType_Focused(lv_event_t *e);
+//  void on_rolType_ValueChanged(lv_event_t *e);
+//  void on_spnTimeHH_Clicked(lv_event_t *e);
+//  void on_spnTimeHH_ValueChanged(lv_event_t *e);
+//  void on_spnTimeMM_Clicked(lv_event_t *e);
+//  void on_spnTimeMM_ValueChanged(lv_event_t *e);
+//  void on_spnTimeSS_Clicked(lv_event_t *e);
+//  void on_spnTimeSS_ValueChanged(lv_event_t *e);
+//  void on_spnTemp_Clicked(lv_event_t *e);
+//  void on_spnTemp_ValueChanged(lv_event_t *e);
 
 /////////////////////
 // ASSETS
@@ -153,6 +153,56 @@ static void style_focus_button(lv_obj_t *btn, lv_color_t bg_default, lv_color_t 
   lv_obj_set_style_text_color(btn, lv_color_hex(0x374151), LV_PART_MAIN | LV_STATE_FOCUSED);
 }
 
+void ui_update_roller_focus_style(UiContext *ui, bool edit) {
+  if (!ui || !ui->rollerType)
+    return;
+
+  lv_obj_t *roller = ui->rollerType;
+  bool focused = (lv_group_get_focused(ui->group) == roller);
+
+  // --- Basis: alles zurück auf "neutral" (nur das, was wir selbst verändern) ---
+
+  // Hintergrund neutral/transparent
+  lv_obj_set_style_bg_opa(roller, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+  lv_obj_set_style_bg_color(roller, lv_color_black(), LV_PART_MAIN | LV_STATE_DEFAULT);
+
+  // Kein Rahmen im Default
+  lv_obj_set_style_border_width(roller, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+  lv_obj_set_style_border_opa(roller, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+  // Text wieder normal (z. B. hell)
+  lv_obj_set_style_text_color(roller, lv_color_hex(0xF9FAFB), LV_PART_MAIN | LV_STATE_DEFAULT);
+  lv_obj_set_style_pad_all(roller, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+  // ================= EDIT-MODUS =================
+  if (edit && focused) {
+    // Blauer Hintergrund, weiße Schrift
+    lv_obj_set_style_bg_opa(roller, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(roller, lv_color_hex(0x2C7DFA), LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    lv_obj_set_style_text_color(roller, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    // Optional: etwas padding für „Kachel-Optik“
+    lv_obj_set_style_pad_all(roller, 4, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    // Kein roter Rahmen im Edit-Modus
+    return;
+  }
+
+  // ================= IDLE / NAVI =================
+  if (focused) {
+    // Roter Rahmen als Fokus-Anzeige
+    lv_obj_set_style_border_width(roller, 3, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_color(roller, lv_color_hex(0xFF0000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(roller, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    // Hintergrund weiterhin transparent
+    lv_obj_set_style_bg_opa(roller, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+  } else {
+    // Nicht fokussiert → neutraler Zustand (oben schon gesetzt)
+  }
+}
+
 /////////////////////
 // SCREEN FUNCTIONS
 /////////////////////
@@ -199,9 +249,9 @@ void ui_main_screen_init() {
   lv_obj_set_style_text_align(ui.rollerType, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
   // To use custom font size, enable a font in lv_conf.h and apply it here.
   // lv_obj_set_style_text_font(ui.rolType, &lv_font_montserrat_14, LV_PART_MAIN | LV_STATE_DEFAULT);
-  lv_obj_add_event_cb(ui.rollerType, on_rolType_Clicked, LV_EVENT_CLICKED, NULL);
-  lv_obj_add_event_cb(ui.rollerType, on_rolType_Focused, LV_EVENT_FOCUSED, NULL);
-  lv_obj_add_event_cb(ui.rollerType, on_rolType_ValueChanged, LV_EVENT_VALUE_CHANGED, NULL);
+  // lv_obj_add_event_cb(ui.rollerType, on_rolType_Clicked, LV_EVENT_CLICKED, NULL);
+  // lv_obj_add_event_cb(ui.rollerType, on_rolType_Focused, LV_EVENT_FOCUSED, NULL);
+  // lv_obj_add_event_cb(ui.rollerType, on_rolType_ValueChanged, LV_EVENT_VALUE_CHANGED, NULL);
 
   // ------------------------------------------
   // --- btnStart Setup ---
@@ -235,7 +285,7 @@ void ui_main_screen_init() {
   lv_obj_set_style_text_align(ui.btnCancel, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
   // To use custom font size, enable a font in lv_conf.h and apply it here.
   // lv_obj_set_style_text_font(ui.btnCancel, &lv_font_montserrat_14, LV_PART_MAIN | LV_STATE_DEFAULT);
-  lv_obj_add_event_cb(ui.btnCancel, on_btnCancel_Focused, LV_EVENT_FOCUSED, NULL);
+  lv_obj_add_event_cb(ui.btnCancel, on_btnCancel_Clicked, LV_EVENT_CLICKED, NULL);
 
   // ------------------------------------------
   // --- spnTimeHH/MM/SS Setup ---
@@ -262,8 +312,8 @@ void ui_main_screen_init() {
   lv_spinbox_set_digit_format(ui.spnTimeHH, 2, 0);
   // To use custom font size, enable a font in lv_conf.h and apply it here.
   // lv_obj_set_style_text_font(ui.spnTimeHH, &lv_font_montserrat_14, LV_PART_MAIN | LV_STATE_DEFAULT);
-  lv_obj_add_event_cb(ui.spnTimeHH, on_spnTimeHH_Clicked, LV_EVENT_CLICKED, NULL);
-  lv_obj_add_event_cb(ui.spnTimeHH, on_spnTimeHH_ValueChanged, LV_EVENT_VALUE_CHANGED, NULL);
+  // lv_obj_add_event_cb(ui.spnTimeHH, on_spnTimeHH_Clicked, LV_EVENT_CLICKED, NULL);
+  // lv_obj_add_event_cb(ui.spnTimeHH, on_spnTimeHH_ValueChanged, LV_EVENT_VALUE_CHANGED, NULL);
 
   // --- lblDP Setup ---
   ui.lblTimeDP1 = lv_label_create(ui.screen);
@@ -286,8 +336,8 @@ void ui_main_screen_init() {
   lv_obj_set_style_text_color(ui.spnTimeMM, lv_color_hex(0xF9FAFB), LV_PART_MAIN | LV_STATE_DEFAULT);
   lv_obj_set_style_text_align(ui.spnTimeMM, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
   lv_spinbox_set_digit_format(ui.spnTimeMM, 2, 0);
-  lv_obj_add_event_cb(ui.spnTimeMM, on_spnTimeMM_Clicked, LV_EVENT_CLICKED, NULL);
-  lv_obj_add_event_cb(ui.spnTimeMM, on_spnTimeMM_ValueChanged, LV_EVENT_VALUE_CHANGED, NULL);
+  // lv_obj_add_event_cb(ui.spnTimeMM, on_spnTimeMM_Clicked, LV_EVENT_CLICKED, NULL);
+  // lv_obj_add_event_cb(ui.spnTimeMM, on_spnTimeMM_ValueChanged, LV_EVENT_VALUE_CHANGED, NULL);
 
   // To use custom font size, enable a font in lv_conf.h and apply it here.
   // lv_obj_set_style_text_font(ui.spnTimeMM, &lv_font_montserrat_14, LV_PART_MAIN | LV_STATE_DEFAULT);

@@ -48,6 +48,9 @@ struct UiContext {
   lv_obj_t *lblTemp = nullptr;
   lv_obj_t *lblBtnStart = nullptr;
   lv_obj_t *lblBtnCancel = nullptr;
+
+  //
+  int selectedFilamentIndex = 0;
 };
 
 enum class UiFocusTarget {
@@ -75,13 +78,15 @@ extern lv_obj_t *ui_spnTemp;
 
 // Function declarations for event callbacks
 void ui_init(void);
-void on_click_rolType(lv_event_t *e);
-void on_change_rolType(lv_event_t *e);
 void on_click_btnStart(lv_event_t *e);
 void on_click_btnCancel(lv_event_t *e);
-void on_click_timeHH(lv_event_t *e);
-void on_change_timeHH(lv_event_t *e);
-void on_click_timeMM(lv_event_t *e);
-void on_change_timeMM(lv_event_t *e);
-void on_click_timeSS(lv_event_t *e);
-void on_change_timeSS(lv_event_t *e);
+void ui_update_roller_focus_style(UiContext *ui, bool edit);
+
+// void on_click_rolType(lv_event_t *e);
+// void on_change_rolType(lv_event_t *e);
+// void on_click_timeHH(lv_event_t *e);
+// void on_change_timeHH(lv_event_t *e);
+// void on_click_timeMM(lv_event_t *e);
+// void on_change_timeMM(lv_event_t *e);
+// void on_click_timeSS(lv_event_t *e);
+// void on_change_timeSS(lv_event_t *e);

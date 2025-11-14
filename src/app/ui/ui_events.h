@@ -4,6 +4,9 @@
 
 static RotarySwitch rs(ENC_PIN_A, ENC_PIN_B, ENC_PIN_SW);
 enum class State { IDLE, EDIT, RUN, COOLING, ERROR };
+enum class EditTarget { None, RollerType, TimeHH, TimeMM, TimeSS, Temp };
+
+static EditTarget s_editTarget = EditTarget::None;
 
 void ui_event_task();
 void ui_event_init();

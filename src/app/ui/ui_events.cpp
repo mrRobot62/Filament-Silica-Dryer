@@ -12,6 +12,14 @@
 
 State g_state;
 
+State getGState() {
+  return g_state;
+}
+
+void setGState(State state) {
+  g_state = state;
+}
+
 // Farben (gern anpassen)
 static inline lv_color_t C_FG_DEFAULT() {
   return lv_color_hex(0xF9FAFB);
@@ -25,20 +33,20 @@ static inline lv_color_t C_BG_FOCUS() {
 
 // ============================== Encoder ==============================
 
-void on_rolType_Clicked(lv_event_t *e) {
-  EVENT_DBG("on_rolType_Clicked");
-  if (on_click_rolType)
-    on_click_rolType(e);
-}
+// void on_rolType_Clicked(lv_event_t *e) {
+//   EVENT_DBG("on_rolType_Clicked");
+//   if (on_click_rolType)
+//     on_click_rolType(e);
+// }
 
-void on_rolType_Focused(lv_event_t *e) {
-  // Your code here
-}
+// void on_rolType_Focused(lv_event_t *e) {
+//   // Your code here
+// }
 
-void on_rolType_ValueChanged(lv_event_t *e) {
-  if (on_change_rolType)
-    on_change_rolType(e);
-}
+// void on_rolType_ValueChanged(lv_event_t *e) {
+//   if (on_change_rolType)
+//     on_change_rolType(e);
+// }
 
 void on_btnStart_Clicked(lv_event_t *e) {
   EVENT_DBG("on_btnStart_Clicked");
@@ -47,61 +55,18 @@ void on_btnStart_Clicked(lv_event_t *e) {
     on_click_btnStart(e);
 }
 
-void on_btnStart_Focused(lv_event_t *e) {
-  // Your code here
-}
+// void on_btnStart_Focused(lv_event_t *e) {
+//   // Your code here
+// }
 
-void on_btnCancel_Focused(lv_event_t *e) {
-  // Your code here
-}
+// void on_btnCancel_Focused(lv_event_t *e) {
+//   // Your code here
+// }
 
 void on_btnCancel_Clicked(lv_event_t *e) {
   EVENT_DBG("on_btnCancel_Clicked");
   if (on_click_btnCancel)
     on_click_btnCancel(e);
-}
-
-//-------------------------------------------------
-// Stunden
-void on_spnTimeHH_Clicked(lv_event_t *e) {
-  EVENT_DBG("on_spnTimeHH_Clicked");
-  if (on_click_timeHH)
-    on_click_timeHH(e);
-}
-
-void on_spnTimeHH_Focused(lv_event_t *e) {}
-
-void on_spnTimeHH_ValueChanged(lv_event_t *e) {
-  if (on_change_timeMM)
-    on_change_timeMM(e);
-}
-
-// Minuten
-void on_spnTimeMM_Clicked(lv_event_t *e) {
-  EVENT_DBG("on_spnTimeMM_Clicked");
-  if (on_click_timeMM)
-    on_click_timeMM(e);
-}
-
-void on_spnTimeMM_Focused(lv_event_t *e) {}
-
-void on_spnTimeMM_ValueChanged(lv_event_t *e) {
-  if (on_change_timeHH)
-    on_change_timeHH(e);
-}
-
-// Sekunden
-void on_spnTimeSS_Clicked(lv_event_t *e) {
-  EVENT_DBG("on_spnTimeSS_Clicked");
-  if (on_click_timeSS)
-    on_click_timeSS(e);
-}
-
-void on_spnTimeSS_Focused(lv_event_t *e) {}
-
-void on_spnTimeSS_ValueChanged(lv_event_t *e) {
-  if (on_change_timeSS)
-    on_change_timeSS(e);
 }
 
 //-------------------------------------------------
@@ -114,73 +79,6 @@ void on_enter_state(State state) {
   }
 }
 
-// void ui_apply_to_focused(uint8_t step) {
-//   UiContext *ui = ui_get();
-//   // wenn UI oder keine WidgetGruppe definiert ist, verlassen
-//   if (!ui || !ui->group) {
-//     Serial.println("ERR no widget group found");
-//     return;
-//   }
-//   lv_obj_t *f = lv_group_get_focused(ui->group);
-//   if (!f) {
-//     Serial.println("ERR no focused widget found");
-//     return;
-//   }
-
-//   auto spinboxStepValue = [&](lv_obj_t *spn) {
-//     if (!spn)
-//       return;
-
-//     int n = (step > 0) ? step : -step;
-//     for (int i = 0; i < n; ++i) {
-//       if (step > 0)
-//         lv_spinbox_increment(spn);
-//       else
-//         lv_spinbox_decrement(spn);
-//     }
-//     Serial.printf("Spinbox[%s]: %d [%d]\n", "", lv_spinbox_get_value(spn), step);
-//   };
-
-//   auto rollerStepValue = [&](lv_obj_t *roller, int step) {
-//     if (!roller)
-//       return;
-
-//     int selection = lv_roller_get_selected(roller);
-//     int cnt = lv_roller_get_option_cnt(roller);
-//     selection += step;
-
-//     if (selection < 0) {
-//       selection = 0;
-//     }
-//     if (selection >= cnt) {
-//       selection = cnt - 1;
-//     }
-//     lv_roller_set_selected(ui->rollerType, selection, LV_ANIM_OFF);
-//     Serial.printf("focus TYPE: selection: %d, cnt: %d");
-//   };
-
-//   if (f == ui->spnTimeHH || f == ui->spnTimeMM || f == ui->spnTimeSS || f == ui->spnTemp) {
-//     Serial.println("focus spinbox");
-//     spinboxStepValue(f);
-//   } else if (f == ui->rollerType) {
-//     rollerStepValue(ui->rollerType, step);
-//     // int sel = lv_roller_get_selected(ui->rollerType);
-//     // int cnt = lv_roller_get_option_cnt(ui->rollerType);
-//     // sel += step;
-//     // if (sel < 0) {
-//     //   sel = 0;
-//     // }
-//     // if (sel >= cnt) {
-//     //   sel = cnt - 1;
-//     // }
-//     // lv_roller_set_selected(ui->rollerType, sel, LV_ANIM_OFF);
-//     Serial.printf("focus TYPE: selection: %d, cnt: %d");
-//   } else {
-//     // ignore buttons usw. in Bezug auf EncoderClicks
-//     Serial.println("focus other");
-//   }
-// }
-
 State stateChanged(State currentState) {
   State newState = currentState;
   // switch (currentState) { case State::IDLE: }
@@ -188,20 +86,11 @@ State stateChanged(State currentState) {
   return newState;
 }
 
-// void ui_apply_focus(UiContext *ui, uint8_t step) {
-//   if (!ui || !ui->group) {
-//     Serial.println("ERR no widget group found");
-//     EVENT_ERR("widget-group not found to change focus");
-//     return;
-//   }
-//   lv_obj_t *f = lv_group_get_focused(ui->group);
-//   if (!f) {
-//     Serial.println("ERR no focused widget found");
-//     return;
-//   }
-// }
-
 UiFocusTarget ui_get_focused_target(const UiContext *ui) {
+  /*
+  Helper Funktion um das fokussierte Widget zu ermitteln "
+  */
+
   if (!ui || !ui->group)
     return UiFocusTarget::None;
 
@@ -227,11 +116,17 @@ UiFocusTarget ui_get_focused_target(const UiContext *ui) {
   return UiFocusTarget::None;
 }
 
-void shortClickDetected(UiContext *ui, State currentstate) {
+void shortClickDetected(UiContext *ui) {
   EVENT_DBG("SingleClick...");
   lv_obj_t *f = lv_group_get_focused(ui->group);
   if (!f)
     return;
+
+  // Buttons bleiben event-basiert. Widgets sind State-Basiert
+  if (f == ui->btnCancel || f == ui->btnStart) {
+    lv_obj_send_event(f, LV_EVENT_CLICKED, NULL);
+    return;
+  }
 
   UiFocusTarget target = ui_get_focused_target(ui);
 
@@ -251,50 +146,60 @@ void shortClickDetected(UiContext *ui, State currentstate) {
 
   case UiFocusTarget::TypeRoller:
     // Roller-Edit-Mode (Filamentauswahl)
-    lv_obj_send_event(f, LV_EVENT_CLICKED, NULL);
-
+    if (getGState() == State::IDLE) {
+      setGState(State::EDIT);
+      s_editTarget = EditTarget::RollerType;
+      // Style für Edit-Mode setzen
+      ui_update_roller_focus_style(ui, /*edit=*/true);
+      EVENT_INFO("Change global state to State::EDIT");
+      return;
+    }
     break;
-
-  case UiFocusTarget::BtnStart:
-    // Start gedrückt – hier könntest du auch direkt das Event feuern
-    // oder on_click_btnStart(equivalent) auslösen
-    break;
-
-  case UiFocusTarget::BtnPause:
-    // Pause
-    break;
-
-  case UiFocusTarget::BtnCancel:
-    // Cancel
-    break;
-
   default:
     break;
   }
 
-  //   switch (currentstate) {
-  //   case State::IDLE:
-  //     if (f) {
-  //       lv_obj_send_event(f, LV_EVENT_CLICKED, NULL);
-  //     }
-  //     break;
-  //   }
+  if (getGState() == State::EDIT) {
+    // optionales zusatzverhalten
+    return;
+  }
 }
 
-void doubleClickDeteced(State currentstate) {
+void doubleClickDeteced(UiContext *ui) {
   EVENT_DBG("DoubleClick...");
 }
 
-void longClickDetected(State currentstate) {
-  EVENT_DBG("LongClick...");
-}
+void longClickDetected(UiContext *ui) {
+  if (!ui || !ui->group)
+    return;
 
-State getGState() {
-  return g_state;
-}
+  lv_obj_t *f = lv_group_get_focused(ui->group);
+  if (!f)
+    return;
 
-void setGState(State state) {
-  g_state = state;
+  // Wir interessieren uns im Moment nur für EditMode+Roller
+  if (getGState() == State::EDIT && s_editTarget == EditTarget::RollerType && f == ui->rollerType) {
+
+    // 1) Aktuelle Auswahl auslesen
+    int sel = lv_roller_get_selected(ui->rollerType);
+
+    // 2) Business-Logik: Auswahl merken / Callback
+    //    z.B. in deinem UiContext:
+    ui->selectedFilamentIndex = sel;
+    // oder falls du einen Callback hast:
+    // if (on_filament_selected) on_filament_selected(sel);
+
+    // 3) Zurück in Navigation
+    setGState(State::IDLE);
+    s_editTarget = EditTarget::None;
+
+    ui_update_roller_focus_style(ui, /*edit=*/false);
+    EVENT_INFO("LongClick - state back to IDLE");
+    // optional:
+    // lv_group_set_editing(ui->group, false);
+
+    return;
+  }
 }
 
 void ui_event_init() {
@@ -318,11 +223,11 @@ void ui_event_task() {
 
   // 1) intent-first -
   if (rs.wasDoubleClicked()) {
-    doubleClickDeteced(g_state);
+    doubleClickDeteced(ui);
   } else if (rs.wasLongClicked()) {
-    longClickDetected(g_state);
+    longClickDetected(ui);
   } else if (rs.wasShortClicked()) {
-    shortClickDetected(ui, g_state);
+    shortClickDetected(ui);
   }
 
   // Encoder Drehbewegung auswerten und Focus setzen
@@ -345,6 +250,16 @@ void ui_event_task() {
         break;
       }
       case State::EDIT: {
+        if (ui->rollerType) {
+          int sel = lv_roller_get_selected(ui->rollerType);
+          sel += dir;
+          int cnt = lv_roller_get_option_cnt(ui->rollerType);
+          if (sel < 0)
+            sel = 0;
+          if (sel >= cnt)
+            sel = cnt - 1;
+          lv_roller_set_selected(ui->rollerType, sel, LV_ANIM_ON);
+        }
         break;
       }
       case State::RUN: {
