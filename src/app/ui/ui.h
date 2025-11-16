@@ -9,10 +9,6 @@
 #include <RotarySwitch.h>
 #include <lvgl.h>
 
-#include "../pins.h"
-#include "RotarySwitch.h"
-#include "lvgl.h"
-
 /**
  * Bundle von widgets die über ui_event genutzt werden können
  */
@@ -27,6 +23,8 @@ struct UiContext {
   lv_obj_t *spnTimeMM = nullptr;
   lv_obj_t *spnTimeSS = nullptr;
   lv_obj_t *spnTemp = nullptr;
+  lv_obj_t *spnTempSoll = nullptr; // read-only nur Anzeige
+  lv_obj_t *arcTempSoll = nullptr;
 
   // Buttons
   lv_obj_t *btnStart = nullptr;
@@ -75,6 +73,7 @@ extern lv_obj_t *ui_spnTimeHH;
 extern lv_obj_t *ui_spnTimeMM;
 extern lv_obj_t *ui_spnTimeSS;
 extern lv_obj_t *ui_spnTemp;
+extern lv_obj_t *ui_spnTempSoll;
 
 // Function declarations for event callbacks
 void ui_init(void);

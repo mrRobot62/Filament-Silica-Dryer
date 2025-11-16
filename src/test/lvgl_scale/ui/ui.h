@@ -1,0 +1,106 @@
+#pragma once
+#include "../logging/log_ui.h"
+#include "../pins.h"
+#include <lvgl.h>
+
+// ------------------------------------------------------------
+// Position-Konstanten
+//
+//
+// Screen-Aufteilung
+// Col1     Col2    Col3    Col4
+// 0-79     80-159  160-239 240-319
+//
+// ------------------------------------------------------------
+#define COL_W 80 // 4x 80 = 320px
+#define PADDING 5
+#define DEFAULT_H 25
+#define FILAMENT_X 5
+#define FILAMENT_Y PADDING
+#define FILAMENT_W int(COL_W * 1.0)
+#define FILAMENT_H DEFAULT_H
+
+#define TIME_SCALE_W 170
+#define TIME_SCALE_H TIME_SCALE_W
+#define TIME_SCALE_X 320 - (TIME_SCALE_W / 2) - PADDING
+#define TIME_SCALE_Y FILAMENT_Y + FILAMENT_H + PADDING
+
+#define TIME_SCALE_HHMM_T PADDING + 3
+#define TIME_SCALE_HH_W TIME_SCALE_W - PADDING
+#define TIME_SCALE_MM_W TIME_SCALE_HH_W - PADDING - 2
+
+#define TEMPIST_SCALE_X TIME_SCALE_X + TIME_SCALE_W + PADDING
+#define TEMPIST_SCALE_W COL_W * 2
+#define TEMPIST_SCALE_H DEFAULT_H
+
+#define TEMPSOLL_SCALE X TIME_SCALE_X + TIME_SCALE_W + PADDING
+#define TEMPSOLL_SCALE_W TEMPIST_SCALE_W
+#define TEMPSOLL_SCALE_H TEMPIST_SCALE_H
+
+#define H_LINE_X TIME_SCALE_Y + TIME_SCALE_H + PADDING
+
+// ------------------------------------------------------------
+// Fonts (müssen in lv_conf.h aktiviert sein)
+// ------------------------------------------------------------
+LV_FONT_DECLARE(lv_font_montserrat_8);
+LV_FONT_DECLARE(lv_font_montserrat_10);
+LV_FONT_DECLARE(lv_font_montserrat_12);
+LV_FONT_DECLARE(lv_font_montserrat_16);
+LV_FONT_DECLARE(lv_font_montserrat_18);
+LV_FONT_DECLARE(lv_font_montserrat_20);
+
+// ------------------------------------------------------------
+// Filament-Informationen & Presets
+// ------------------------------------------------------------
+static const uint8_t MAX_PRESETS = 30;
+
+struct FilamentPreset {
+  String filament; // Filament name
+  float dryTemp;   // Drying temperature in °C
+  uint8_t timeH;   // Drying time hours
+  uint8_t timeM;   // Drying time minutes
+  bool rotaryOn;   // Rotary enabled
+
+  FilamentPreset() : filament(""), dryTemp(0.0f), timeH(0), timeM(0), rotaryOn(false) {}
+
+  FilamentPreset(const String &name, float temp, uint8_t h, uint8_t m, bool rotary = false)
+      : filament(name), dryTemp(temp), timeH(h), timeM(m), rotaryOn(rotary) {}
+};
+
+// Preset storage
+static FilamentPreset g_presets[MAX_PRESETS];
+static uint8_t g_presetCount = 0;
+static uint8_t g_default_preset_id = 5;
+
+struct UiContext {
+  lv_obj_t *screen = nullptr;
+
+  // Input- / Buttons
+  lv_obj_t *scaleTime = nullptr;
+  lv_obj_t *scaleTime_HH = nullptr;
+  lv_obj_t *scaleTime_MM = nullptr;
+  lv_obj_t *scaleTemp_IST = nullptr;
+  lv_obj_t *scaleTemp_SOLL = nullptr;
+  lv_obj_t *rollerFilament = nullptr;
+  lv_obj_t *btnStartStop = nullptr;
+
+  // LEDs zur Anzeige von Status
+  lv_obj_t *ledFan230V = nullptr;
+  lv_obj_t *ledFan230V_L = nullptr;
+  lv_obj_t *ledFan12V = nullptr;
+  lv_obj_t *ledMotor = nullptr;
+  lv_obj_t *ledDoor = nullptr;
+
+  // Fokus-Gruppe
+  lv_group_t *group = nullptr;
+
+  //
+};
+
+static UiContext g_ui;
+
+enum class UIFocusTarget { None, Time, TempSoll, Filament, StartStop };
+
+void ui_init(void);
+void on_click_btnStartStop(lv_event_t *e);
+void ui_update_roller_focus_style(UiContext *ui, bool edit);

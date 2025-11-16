@@ -32,36 +32,12 @@ static inline lv_color_t C_BG_FOCUS() {
 }
 
 // ============================== Encoder ==============================
-
-// void on_rolType_Clicked(lv_event_t *e) {
-//   EVENT_DBG("on_rolType_Clicked");
-//   if (on_click_rolType)
-//     on_click_rolType(e);
-// }
-
-// void on_rolType_Focused(lv_event_t *e) {
-//   // Your code here
-// }
-
-// void on_rolType_ValueChanged(lv_event_t *e) {
-//   if (on_change_rolType)
-//     on_change_rolType(e);
-// }
-
 void on_btnStart_Clicked(lv_event_t *e) {
   EVENT_DBG("on_btnStart_Clicked");
 
   if (on_click_btnStart)
     on_click_btnStart(e);
 }
-
-// void on_btnStart_Focused(lv_event_t *e) {
-//   // Your code here
-// }
-
-// void on_btnCancel_Focused(lv_event_t *e) {
-//   // Your code here
-// }
 
 void on_btnCancel_Clicked(lv_event_t *e) {
   EVENT_DBG("on_btnCancel_Clicked");
@@ -84,6 +60,37 @@ State stateChanged(State currentState) {
   // switch (currentState) { case State::IDLE: }
 
   return newState;
+}
+
+static void enter_time_edit(UiContext *ui, lv_obj_t *sb, EditTarget target) {
+  /* Helper für Time-SpinBoxes im Edit-Modus */
+  if (!ui || !sb)
+    return;
+
+  setGState(State::EDIT);
+  s_editTarget = target;
+  lv_obj_set_style_bg_opa(sb, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
+  lv_obj_set_style_bg_color(sb, lv_color_hex(0x2C7DFA), LV_PART_MAIN | LV_STATE_DEFAULT);
+  lv_obj_set_style_text_color(sb, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+
+  // optional: Outline weg im Edit-Mode
+  lv_obj_set_style_border_width(sb, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+}
+
+static void exit_time_edit(UiContext *ui, lv_obj_t *sb) {
+  /* helper für Time-SpinBoxes wenn EXIT*/
+  if (!ui || !sb)
+    return;
+
+  setGState(State::IDLE);
+  s_editTarget = EditTarget::None;
+
+  // Style zurück auf „nur Fokus-Rahmen / neutral“
+  // (vereinfachte Version – du kannst das später in deine
+  //  generische Fokus-Logik integrieren)
+  lv_obj_set_style_bg_opa(sb, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
+  lv_obj_set_style_bg_color(sb, lv_color_black(), LV_PART_MAIN | LV_STATE_DEFAULT);
+  lv_obj_set_style_text_color(sb, lv_color_hex(0xF9FAFB), LV_PART_MAIN | LV_STATE_DEFAULT);
 }
 
 UiFocusTarget ui_get_focused_target(const UiContext *ui) {
@@ -129,36 +136,40 @@ void shortClickDetected(UiContext *ui) {
   }
 
   UiFocusTarget target = ui_get_focused_target(ui);
-
-  switch (target) {
-  case UiFocusTarget::TimeHH:
-  case UiFocusTarget::TimeMM:
-  case UiFocusTarget::TimeSS:
-    // Time-Edit-Modus toggeln
-    // z.B. s_edit_mode_time = !s_edit_mode_time;
-    // evtl. Cursor aktivieren, Style anpassen, etc.
-    // ui_update_time_edit_style(ui, target);
-    break;
-
-  case UiFocusTarget::Temp:
-    // Temperaturedit
-    break;
-
-  case UiFocusTarget::TypeRoller:
-    // Roller-Edit-Mode (Filamentauswahl)
-    if (getGState() == State::IDLE) {
-      setGState(State::EDIT);
-      s_editTarget = EditTarget::RollerType;
-      // Style für Edit-Mode setzen
-      ui_update_roller_focus_style(ui, /*edit=*/true);
-      EVENT_INFO("Change global state to State::EDIT");
+  if (getGState() == State::IDLE) {
+    switch (target) {
+    case UiFocusTarget::TimeMM:
+      enter_time_edit(ui, f, EditTarget::TimeMM);
       return;
-    }
-    break;
-  default:
-    break;
-  }
+      break;
+    case UiFocusTarget::TimeSS:
+      enter_time_edit(ui, f, EditTarget::TimeSS);
+      return;
+      break;
+    case UiFocusTarget::TimeHH:
+      enter_time_edit(ui, f, EditTarget::TimeHH);
+      return;
+      break;
 
+    case UiFocusTarget::Temp:
+      // Temperaturedit
+      break;
+
+    case UiFocusTarget::TypeRoller:
+      // Roller-Edit-Mode (Filamentauswahl)
+      if (getGState() == State::IDLE) {
+        setGState(State::EDIT);
+        s_editTarget = EditTarget::RollerType;
+        // Style für Edit-Mode setzen
+        ui_update_roller_focus_style(ui, /*edit=*/true);
+        EVENT_INFO("Change global state to State::EDIT");
+        return;
+      }
+      break;
+    default:
+      break;
+    }
+  }
   if (getGState() == State::EDIT) {
     // optionales zusatzverhalten
     return;
@@ -243,6 +254,8 @@ void ui_event_task() {
     int8_t dir = diff > 0 ? +1 : -1;
     EVENT_DBG("STATE: %d, ENC: %d|%d - Diff: %d  - Dir: %d - Step: %d\n", getGState(), (int)newPos, lastPos, diff, dir,
               steps);
+    lv_obj_t *f = lv_group_get_focused(ui->group);
+
     for (uint8_t i = 0; i < steps; ++i) {
       // Serial.println("switch(getGState())");
       switch (getGState()) {
@@ -250,6 +263,29 @@ void ui_event_task() {
         break;
       }
       case State::EDIT: {
+        // spinBoxen verarbeiten
+        auto spin_step = [&](lv_obj_t *sb) {
+          if (!sb)
+            return;
+          if (dir > 0)
+            lv_spinbox_increment(sb);
+          else
+            lv_spinbox_decrement(sb);
+        };
+        if (s_editTarget == EditTarget::TimeHH && f == ui->spnTimeHH) {
+          spin_step(ui_spnTimeHH);
+          return;
+        }
+        if (s_editTarget == EditTarget::TimeMM && f == ui->spnTimeMM) {
+          spin_step(ui_spnTimeMM);
+          return;
+        }
+        if (s_editTarget == EditTarget::TimeSS && f == ui->spnTimeSS) {
+          spin_step(ui_spnTimeSS);
+          return;
+        }
+
+        // rollerType verarbeiten (Filamentauswahl)
         if (ui->rollerType) {
           int sel = lv_roller_get_selected(ui->rollerType);
           sel += dir;

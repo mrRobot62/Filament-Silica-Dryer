@@ -6,7 +6,7 @@
  */
 
 #include "ui.h"
-#include "../logging/log_ui.h"
+
 
 #define INPUT_PADDING 5
 #define LBL_LEFT_POS_X 5
@@ -99,6 +99,7 @@ lv_obj_t *ui_imgDorr;
 lv_obj_t *ui_Image2;
 lv_obj_t *ui_Image3;
 lv_obj_t *ui_imgMotor;
+lv_obj_t *ui_arcTempSoll;
 
 static UiContext g_ui;
 
@@ -248,7 +249,7 @@ void ui_main_screen_init() {
   lv_obj_set_style_text_color(ui.rollerType, lv_color_hex(0xF9FAFB), LV_PART_MAIN | LV_STATE_DEFAULT);
   lv_obj_set_style_text_align(ui.rollerType, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
   // To use custom font size, enable a font in lv_conf.h and apply it here.
-  // lv_obj_set_style_text_font(ui.rolType, &lv_font_montserrat_14, LV_PART_MAIN | LV_STATE_DEFAULT);
+  lv_obj_set_style_text_font(ui.rollerType, &lv_font_montserrat_18, LV_PART_MAIN | LV_STATE_DEFAULT);
   // lv_obj_add_event_cb(ui.rollerType, on_rolType_Clicked, LV_EVENT_CLICKED, NULL);
   // lv_obj_add_event_cb(ui.rollerType, on_rolType_Focused, LV_EVENT_FOCUSED, NULL);
   // lv_obj_add_event_cb(ui.rollerType, on_rolType_ValueChanged, LV_EVENT_VALUE_CHANGED, NULL);
@@ -310,10 +311,6 @@ void ui_main_screen_init() {
   lv_obj_set_style_text_color(ui.spnTimeHH, lv_color_hex(0xF9FAFB), LV_PART_MAIN | LV_STATE_DEFAULT);
   lv_obj_set_style_text_align(ui.spnTimeHH, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
   lv_spinbox_set_digit_format(ui.spnTimeHH, 2, 0);
-  // To use custom font size, enable a font in lv_conf.h and apply it here.
-  // lv_obj_set_style_text_font(ui.spnTimeHH, &lv_font_montserrat_14, LV_PART_MAIN | LV_STATE_DEFAULT);
-  // lv_obj_add_event_cb(ui.spnTimeHH, on_spnTimeHH_Clicked, LV_EVENT_CLICKED, NULL);
-  // lv_obj_add_event_cb(ui.spnTimeHH, on_spnTimeHH_ValueChanged, LV_EVENT_VALUE_CHANGED, NULL);
 
   // --- lblDP Setup ---
   ui.lblTimeDP1 = lv_label_create(ui.screen);
@@ -336,8 +333,7 @@ void ui_main_screen_init() {
   lv_obj_set_style_text_color(ui.spnTimeMM, lv_color_hex(0xF9FAFB), LV_PART_MAIN | LV_STATE_DEFAULT);
   lv_obj_set_style_text_align(ui.spnTimeMM, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
   lv_spinbox_set_digit_format(ui.spnTimeMM, 2, 0);
-  // lv_obj_add_event_cb(ui.spnTimeMM, on_spnTimeMM_Clicked, LV_EVENT_CLICKED, NULL);
-  // lv_obj_add_event_cb(ui.spnTimeMM, on_spnTimeMM_ValueChanged, LV_EVENT_VALUE_CHANGED, NULL);
+  lv_obj_set_style_text_font(ui.spnTimeMM, &lv_font_montserrat_14, LV_PART_MAIN | LV_STATE_DEFAULT);
 
   // To use custom font size, enable a font in lv_conf.h and apply it here.
   // lv_obj_set_style_text_font(ui.spnTimeMM, &lv_font_montserrat_14, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -362,8 +358,7 @@ void ui_main_screen_init() {
   lv_obj_set_style_text_color(ui.spnTimeSS, lv_color_hex(0xF9FAFB), LV_PART_MAIN | LV_STATE_DEFAULT);
   lv_obj_set_style_text_align(ui.spnTimeSS, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
   lv_spinbox_set_digit_format(ui.spnTimeSS, 2, 0);
-  // To use custom font size, enable a font in lv_conf.h and apply it here.
-  // lv_obj_set_style_text_font(ui.spnTimeSS, &lv_font_montserrat_14, LV_PART_MAIN | LV_STATE_DEFAULT);
+  lv_obj_set_style_text_font(ui.spnTimeSS, &lv_font_montserrat_14, LV_PART_MAIN | LV_STATE_DEFAULT);
 
   // ------------------------------------------
   // --- Temperature
@@ -382,16 +377,43 @@ void ui_main_screen_init() {
   ui.spnTemp = lv_spinbox_create(ui.screen);
   lv_spinbox_set_range(ui.spnTemp, 0, 120);
   lv_spinbox_set_value(ui.spnTemp, 0);
-  lv_obj_set_width(ui.spnTemp, 150);
+  lv_obj_set_width(ui.spnTemp, 70);
   lv_obj_set_height(ui.spnTemp, 35);
   lv_obj_align(ui.spnTemp, LV_ALIGN_TOP_LEFT, INPUT_POS_X0, INPUT_ROW2_Y);
   lv_obj_set_style_bg_color(ui.spnTemp, lv_color_hex(0x374151), LV_PART_MAIN | LV_STATE_DEFAULT);
   lv_obj_set_style_text_color(ui.spnTemp, lv_color_hex(0xF9FAFB), LV_PART_MAIN | LV_STATE_DEFAULT);
   lv_obj_set_style_text_align(ui.spnTemp, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
   lv_spinbox_set_digit_format(ui.spnTemp, 3, 0);
+  lv_obj_set_style_text_font(ui.spnTemp, &lv_font_montserrat_18, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+  ui.spnTempSoll = lv_spinbox_create(ui.screen);
+  lv_spinbox_set_value(ui.spnTempSoll, 0);
+  lv_obj_set_width(ui.spnTempSoll, 70);
+  lv_obj_set_height(ui.spnTempSoll, 35);
+  lv_obj_align(ui.spnTempSoll, LV_ALIGN_TOP_LEFT, INPUT_POS_X0 + 70 + 5, INPUT_ROW2_Y);
+  lv_spinbox_set_digit_format(ui.spnTempSoll, 3, 0);
+  lv_obj_set_style_text_font(ui.spnTempSoll, &lv_font_montserrat_18, LV_PART_MAIN | LV_STATE_DEFAULT);
+  lv_obj_add_state(ui.spnTempSoll, LV_STATE_DISABLED);
+  lv_obj_set_style_text_color(ui.spnTempSoll, lv_color_hex(0xF9FAFB), LV_PART_CURSOR | LV_STATE_DEFAULT);
+  // Für DISABLED gleich mitziehen:
+  lv_obj_set_style_bg_opa(ui.spnTempSoll, LV_OPA_TRANSP, LV_PART_CURSOR | LV_STATE_DISABLED);
+  lv_obj_set_style_bg_color(ui.spnTempSoll, lv_color_hex(0xFFFFFF), LV_PART_CURSOR | LV_STATE_DISABLED);
+  lv_obj_set_style_text_color(ui.spnTempSoll, lv_color_hex(0x000000), LV_PART_CURSOR | LV_STATE_DISABLED);
 
   // To use custom font size, enable a font in lv_conf.h and apply it here.
   // lv_obj_set_style_text_font(ui.spnTemp, &lv_font_montserrat_14, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+  // ui.arcTempSoll = lv_meter_create(ui_Screen1); /* Replaces deprecated lv_gauge */
+  // lv_meter_scale_t *scale = lv_meter_add_scale(ui.arcTempSoll);
+  // lv_meter_set_scale_range(ui.arcTempSoll, 0, 120, 270, 135);
+  // lv_meter_indicator_t *indic_arc = lv_meter_add_arc(ui.arcTempSoll, scale, 10, lv_color_hex(0xEF4444), 0);
+  // lv_meter_indicator_t *indic_needle = lv_meter_add_needle_line(ui.arcTempSoll, scale, 4, lv_color_grey(), -10);
+  // lv_meter_set_indicator_value(indic_needle, 70);
+  // lv_obj_set_width(ui_gauTemp, 70);
+  // lv_obj_set_height(ui_gauTemp, 70);
+  // lv_obj_align(ui_gauTemp, LV_ALIGN_TOP_LEFT, 5, 5);
+  // lv_obj_set_style_bg_color(ui_gauTemp, lv_color_hex(0x4B5563), LV_PART_MAIN | LV_STATE_DEFAULT);
+  // lv_obj_set_style_text_color(ui_gauTemp, lv_color_hex(0xF9FAFB), LV_PART_MAIN | LV_STATE_DEFAULT);
 
   // ------------------------------------------
   // --- Logger - Info-Message
