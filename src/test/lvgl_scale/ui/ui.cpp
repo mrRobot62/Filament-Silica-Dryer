@@ -1,4 +1,5 @@
 #include "ui.h"
+
 // #374151  DarkGray (Background)
 // #F9FAFB  White (Textcolor
 // #00bd19FF InfoMessage, LED-Green
@@ -7,6 +8,7 @@
 // #9000ffff Arc_Needle_H
 // #c374ffff Arc_Needle_M
 // #00ffa6ff IST_TIME, IST_TEMP
+// #e100ffff ScaleFrame
 
 // #F9FAFB
 // #000000
@@ -21,12 +23,14 @@
 #define COLOR_WHITE 0xF9FAFB
 
 #define COLOR_TEXT COLOR_WHITE
-#define COLOR_ARC_NEEDLE_H 0x9000FF
-#define COLOR_ARC_NEEDLE_M 0xC374FF
+#define COLOR_ARC_NEEDLE_H 0xFF8800
+#define COLOR_ARC_NEEDLE_M COLOR_WHITE
 #define COLOR_NEEDLES 0x00FFA6
 #define COLOR_TEMP_SOLL 0x9000FF
 #define COLOR_TEMP_IST 0x00FFA6
+#define COLOR_SCALE_FRAME 0xE100FF
 
+#define SCALE_MIN_TICKS 5
 /*
     Sicherstellen das wenigistens Basis-Presets vorhanden sind
 */
@@ -100,10 +104,46 @@ void updateUiPresetWidgets(uint8_t optionID) {
   UI_INFO("UpdateUiPresetWidgets(%s)", fp.filament.c_str());
 }
 
+void next_needle_positions(const int32_t counter_minutes, int32_t &hour_pos, int32_t &minute_pos) {
+  int32_t h = counter_minutes / 60;
+  int32_t m = counter_minutes % 60;
+  hour_pos = (h % 12) * SCALE_MIN_TICKS + (m / 12);
+  UI_DBG("[CB] %d, h:%d, m:%d => hour_pos=%d\n", (int)counter_minutes, (int)h, (int)m, (int)hour_pos);
+}
+
+static void countdown_timer_cb(lv_timer_t *t) {
+  LV_UNUSED(t);
+  UiContext *ui = &g_ui;
+  if (countdown_minutes <= 0) {
+    // Timer fertig – Zeiger auf 0 oder irgendwas Spezielles machen
+    lv_scale_set_line_needle_value(ui->scaleTime, ui->needleMM, 60, 0);
+    lv_scale_set_line_needle_value(ui->scaleTime, ui->needleHH, 40, 0);
+    lv_timer_del(countdown_timer);
+    countdown_timer = nullptr;
+    UI_INFO("Countdown finished");
+    return;
+  }
+
+  countdown_minutes--; // eine Minute ist vorbei
+  UI_INFO("Countdown: %d minutes remaining \n", countdown_minutes);
+  //UI_INFO("Scale (%d x %d) \n", (int)lv_obj_get_width(ui->scaleTime), (int)lv_obj_get_height(ui->scaleTime));
+  int32_t hour_pos, minute_pos = 0;
+  next_needle_positions(countdown_minutes, hour_pos, minute_pos);
+
+  lv_scale_set_line_needle_value(ui->scaleTime, ui->needleMM, 60, minute_pos);
+  UI_INFO("[CB]  after update minute needle\n");
+
+  lv_scale_set_line_needle_value(ui->scaleTime, ui->needleHH,40, hour_pos);
+  UI_INFO("[CB]  after update hour needle\n");
+}
+
 void ui_main_screen(UiContext *ui) {
 
   // ------------------------------------------
   // grundlegendes Screen-Setup
+  //
+  // Bottom - UP - Widgets werden übereinander gelegt
+  // Beginn mit dem untersten....
   // ------------------------------------------
   ui->screen = lv_obj_create(NULL);
   lv_obj_clear_flag(ui->screen, LV_OBJ_FLAG_SCROLLABLE);
@@ -118,28 +158,8 @@ void ui_main_screen(UiContext *ui) {
   lv_obj_set_style_text_color(ui->screen, lv_color_hex(0xF9FAFB), LV_PART_MAIN | LV_STATE_DEFAULT);
 
   // ------------------------------------------
-  // --- rollerFilament ---
-  // ------------------------------------------
-
-  ui->rollerFilament = lv_roller_create(ui->screen);
-
-  lv_roller_set_selected(ui->rollerFilament, 1, LV_ANIM_OFF);
-  lv_obj_set_width(ui->rollerFilament, FILAMENT_W);
-  lv_obj_set_height(ui->rollerFilament, FILAMENT_H);
-  // lv_obj_align(ui->rollerFilament, LV_ALIGN_TOP_LEFT, FILAMENT_X, FILAMENT_Y);
-  lv_obj_center(ui->rollerFilament);
-  lv_obj_set_style_bg_color(ui->rollerFilament, lv_color_hex(COLOR_BG), LV_PART_MAIN | LV_STATE_DEFAULT);
-  lv_obj_set_style_text_color(ui->rollerFilament, lv_color_hex(COLOR_TEXT), LV_PART_MAIN | LV_STATE_DEFAULT);
-  lv_obj_set_style_text_align(ui->rollerFilament, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
-  // lv_roller_set_options( ui->rollerFilament, "PLA-Basic\nPLA+\nPLA-HS\nPETG\nPETG-HS\nASA\nTPU",
-  // LV_ROLLER_MODE_NORMAL);
-  ui_update_filament_options(g_default_preset_id);
-
-  // ------------------------------------------
   // --- scaleTime ---
   // ------------------------------------------
-  static lv_obj_t *minute_needle;
-  static lv_obj_t *hour_needle;
 
   auto mk_round_scale = [&](uint8_t w) -> lv_obj_t * {
     lv_obj_t *scale = lv_scale_create(ui->screen);
@@ -151,12 +171,12 @@ void ui_main_screen(UiContext *ui) {
     return scale;
   };
 
-  auto mk_time_ring = [&](uint8_t w, uint8_t t) -> lv_obj_t * {
-    lv_obj_t *scale = lv_scale_create(ui->screen);
-    lv_obj_set_style_arc_width(scale, w, LV_PART_MAIN);
-    lv_scale_set_mode(scale, LV_SCALE_MODE_ROUND_OUTER);
-    lv_scale_set_range(scale, 0, 60);
-    return scale;
+  auto mk_scale_needle = [&](uint8_t width, lv_color_t color) -> lv_obj_t * {
+    lv_obj_t *line = lv_line_create(ui->scaleTime);
+    lv_obj_set_style_line_width(line, width, 0);
+    lv_obj_set_style_line_rounded(line, true, 0);
+    lv_obj_set_style_line_color(line, color, 0);
+    return line;
   };
 
   // ---------------------
@@ -167,7 +187,7 @@ void ui_main_screen(UiContext *ui) {
   lv_obj_set_style_bg_color(ui->scaleTime, /*lv_color_black()*/ lv_color_hex(COLOR_WHITE), 0);
   lv_scale_set_label_show(ui->scaleTime, true);
   lv_scale_set_total_tick_count(ui->scaleTime, 61);
-  lv_scale_set_major_tick_every(ui->scaleTime, 5);
+  lv_scale_set_major_tick_every(ui->scaleTime, SCALE_MIN_TICKS);
   static const char *hour_ticks[] = {"12", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", NULL};
   lv_scale_set_text_src(ui->scaleTime, hour_ticks);
   static lv_style_t indicator_style;
@@ -179,7 +199,7 @@ void ui_main_screen(UiContext *ui) {
 
   /* Major tick properties */
   lv_style_set_line_color(&indicator_style, lv_palette_main(LV_PALETTE_YELLOW));
-  lv_style_set_length(&indicator_style, 18);    /* tick length */
+  lv_style_set_length(&indicator_style, 12);    /* tick length */
   lv_style_set_line_width(&indicator_style, 3); /* tick width */
   lv_obj_add_style(ui->scaleTime, &indicator_style, LV_PART_INDICATOR);
 
@@ -188,14 +208,14 @@ void ui_main_screen(UiContext *ui) {
   lv_style_init(&minor_ticks_style);
   lv_style_set_line_color(&minor_ticks_style, lv_palette_main(LV_PALETTE_YELLOW));
 
-  lv_style_set_length(&minor_ticks_style, 14);    /* tick length */
+  lv_style_set_length(&minor_ticks_style, 8);     /* tick length */
   lv_style_set_line_width(&minor_ticks_style, 2); /* tick width */
   lv_obj_add_style(ui->scaleTime, &minor_ticks_style, LV_PART_ITEMS);
 
   /* Main line properties */
   static lv_style_t main_line_style;
   lv_style_init(&main_line_style);
-  lv_style_set_arc_color(&main_line_style, lv_color_black());
+  lv_style_set_arc_color(&main_line_style, /*lv_color_black()*/ lv_color_hex(COLOR_SCALE_FRAME));
   lv_style_set_arc_width(&main_line_style, 5);
   lv_obj_add_style(ui->scaleTime, &main_line_style, LV_PART_MAIN);
 
@@ -204,40 +224,39 @@ void ui_main_screen(UiContext *ui) {
   lv_scale_set_rotation(ui->scaleTime, 270); // 0 = 3Uhr, 90=6Uhr, 180=9Uhr, 270=12Uhr
 
   // ---------------------
-  // Stunden-Anzeige
-  // ---------------------
-  ui->scaleTime_HH = mk_time_ring(TIME_SCALE_HH_W, TIME_SCALE_HHMM_T);
-  static lv_style_t style_HH;
-  lv_style_init(&style_HH);
-  lv_style_set_arc_color(&style_HH, lv_palette_darken(LV_PALETTE_PURPLE, 3));
-  lv_scale_section_t *section_HH = lv_scale_add_section(ui->scaleTime_HH);
-  lv_scale_set_section_range(ui->scaleTime_HH, section_HH, 5, 17);
-  lv_scale_set_section_style_main(ui->scaleTime_HH, section_HH, &style_HH);
+  // Zeiger
 
-  // ---------------------
-  // Stunden-Anzeige
-  // ---------------------
-  ui->scaleTime_MM = mk_round_scale(TIME_SCALE_MM_W);
+  ui->needleMM = mk_scale_needle(3, lv_color_hex(COLOR_ARC_NEEDLE_M));
+  ui->needleHH = mk_scale_needle(5, lv_color_hex(COLOR_ARC_NEEDLE_H)); 
+  
 
-  //   minute_hand = lv_line_create(ui->scaleTime);
-  //   lv_line_set_points_mutable(minute_hand, minute_hand_points, 2);
+  lv_scale_set_line_needle_value(ui->scaleTime, ui->needleMM, TIME_NEEDLE_LEN_M, 0);                   // Minute auf 0
+  lv_scale_set_line_needle_value(ui->scaleTime, ui->needleHH, TIME_NEEDLE_LEN_H, 3 * SCALE_MIN_TICKS); // Stunde auf 3
 
-  //   lv_obj_set_style_line_width(minute_hand, 3, 0);
-  //   lv_obj_set_style_line_rounded(minute_hand, true, 0);
-  //   lv_obj_set_style_line_color(minute_hand, lv_color_white(), 0);
-
-  //   hour_hand = lv_line_create(ui->scaleTime);
-
-  //   lv_obj_set_style_line_width(hour_hand, 5, 0);
-  //   lv_obj_set_style_line_rounded(hour_hand, true, 0);
-  //   lv_obj_set_style_line_color(hour_hand, lv_palette_main(LV_PALETTE_RED), 0);
-
-  //   hour = 11;
-  //   minute = 5;
-  // lv_timer_t * timer = lv_timer_create(timer_cb, 250, NULL);
-  // lv_timer_ready(timer);
-
+  hours = 4;
+  minutes = 50;
+  countdown_minutes = hours * 60 + minutes;
+  countdown_timer = lv_timer_create(countdown_timer_cb, 1000, nullptr);
+  lv_timer_enable(countdown_timer); // erst mal deaktivieren
   // To use custom font size, enable a font in lv_conf.h and apply it here.
+
+  // ------------------------------------------
+  // --- rollerFilament ---
+  // ------------------------------------------
+
+  //   ui->rollerFilament = lv_roller_create(ui->screen);
+
+  //   lv_roller_set_selected(ui->rollerFilament, 1, LV_ANIM_OFF);
+  //   lv_obj_set_width(ui->rollerFilament, FILAMENT_W);
+  //   lv_obj_set_height(ui->rollerFilament, FILAMENT_H);
+  //   // lv_obj_align(ui->rollerFilament, LV_ALIGN_TOP_LEFT, FILAMENT_X, FILAMENT_Y);
+  //   lv_obj_center(ui->rollerFilament);
+  //   lv_obj_set_style_bg_color(ui->rollerFilament, lv_color_hex(COLOR_BG), LV_PART_MAIN | LV_STATE_DEFAULT);
+  //   lv_obj_set_style_text_color(ui->rollerFilament, lv_color_hex(COLOR_TEXT), LV_PART_MAIN | LV_STATE_DEFAULT);
+  //   lv_obj_set_style_text_align(ui->rollerFilament, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+  //   // lv_roller_set_options( ui->rollerFilament, "PLA-Basic\nPLA+\nPLA-HS\nPETG\nPETG-HS\nASA\nTPU",
+  //   // LV_ROLLER_MODE_NORMAL);
+  //   ui_update_filament_options(g_default_preset_id);
 
   // --------------------------------------------
   // --- Focus-Gruppe erzeugen ---
@@ -250,9 +269,18 @@ void ui_main_screen(UiContext *ui) {
 void ui_init() {
   UiContext *ui = &g_ui;
   ui_main_screen(ui);
+  hours = 4;
+  int32_t hour_pos, minute_pos = 0;
+  // countdown_minutes = hours * 60 + minutes;
+  // next_needle_positions(countdown_minutes, hour_pos, minute_pos);
+  //    int32_t h = countdown_minutes / 60;
+  //    int32_t m = countdown_minutes % 60;
+  //    int32_t hour_pos = (h % 12) * SCALE_MIN_TICKS + (m / 12);
   lv_disp_load_scr(ui->screen);
-}
-
-void ui_task() {
-  UiContext *ui = &g_ui;
+  // lv_timer_t *defer = lv_timer_create(
+  //     [](lv_timer_t *t) {
+  //       lv_timer_del(t);
+  //       countdown_timer = lv_timer_create(countdown_timer_cb, 1000, nullptr);
+  //     },
+  //     0, nullptr);
 }

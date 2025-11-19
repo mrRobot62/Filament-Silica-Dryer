@@ -28,6 +28,8 @@
 #define TIME_SCALE_HHMM_T PADDING + 3
 #define TIME_SCALE_HH_W TIME_SCALE_W - PADDING
 #define TIME_SCALE_MM_W TIME_SCALE_HH_W - PADDING - 2
+#define TIME_NEEDLE_LEN_M 55
+#define TIME_NEEDLE_LEN_H 50
 
 #define TEMPIST_SCALE_X TIME_SCALE_X + TIME_SCALE_W + PADDING
 #define TEMPIST_SCALE_W COL_W * 2
@@ -71,6 +73,9 @@ struct FilamentPreset {
 static FilamentPreset g_presets[MAX_PRESETS];
 static uint8_t g_presetCount = 0;
 static uint8_t g_default_preset_id = 5;
+static uint32_t hours, minutes;
+static lv_timer_t *countdown_timer;
+static int32_t countdown_minutes = 0; // Restzeit in Minuten
 
 struct UiContext {
   lv_obj_t *screen = nullptr;
@@ -83,6 +88,8 @@ struct UiContext {
   lv_obj_t *scaleTemp_SOLL = nullptr;
   lv_obj_t *rollerFilament = nullptr;
   lv_obj_t *btnStartStop = nullptr;
+  lv_obj_t *needleHH = nullptr;
+  lv_obj_t *needleMM = nullptr;
 
   // LEDs zur Anzeige von Status
   lv_obj_t *ledFan230V = nullptr;
