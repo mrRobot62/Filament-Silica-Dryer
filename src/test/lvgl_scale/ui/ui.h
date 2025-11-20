@@ -73,9 +73,9 @@ struct FilamentPreset {
 static FilamentPreset g_presets[MAX_PRESETS];
 static uint8_t g_presetCount = 0;
 static uint8_t g_default_preset_id = 5;
-static uint32_t hours, minutes;
-static lv_timer_t *countdown_timer;
-static int32_t countdown_minutes = 0; // Restzeit in Minuten
+// static uint32_t hours, minutes;
+// static lv_timer_t *countdown_timer;
+// static int32_t countdown_minutes = 0; // Restzeit in Minuten
 
 struct UiContext {
   lv_obj_t *screen = nullptr;
@@ -102,6 +102,9 @@ struct UiContext {
   lv_group_t *group = nullptr;
 
   //
+  int32_t countdown_minutes = 0; // Restzeit in Minuten
+  lv_timer_t *countdown_timer = nullptr;
+  int32_t hours, minutes;
 };
 
 static UiContext g_ui;
