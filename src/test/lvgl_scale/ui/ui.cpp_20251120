@@ -26,23 +26,14 @@
 #define COLOR_ARC_NEEDLE_H 0xFF8800
 #define COLOR_ARC_NEEDLE_M COLOR_WHITE
 #define COLOR_NEEDLES 0x00FFA6
-#define COLOR_TEMP_SET 0x9000FF
-#define COLOR_TEMP_ACTUAL 0x00FFA6
+#define COLOR_TEMP_SOLL 0x9000FF
+#define COLOR_TEMP_IST 0x00FFA6
 #define COLOR_SCALE_FRAME 0xE100FF
 
 #define SCALE_MIN_TICKS 5
 /*
     Sicherstellen das wenigistens Basis-Presets vorhanden sind
 */
-
-typedef struct {
-  int32_t x;
-  int32_t y;
-  int32_t length;
-} TempLinePosition;
-
-TempLinePosition tempSetPos;
-TempLinePosition tempCurPos;
 
 void initFilamentPresets() {
   g_presetCount = 0;
@@ -120,94 +111,26 @@ void next_needle_positions(const int32_t counter_minutes, int32_t &hour_pos, int
   UI_DBG("[CB] %d, h:%d, m:%d => hour_pos=%d\n", (int)counter_minutes, (int)h, (int)m, (int)hour_pos);
 }
 
-static int calc_minute_angle(int minute) {
-  return (90 - minute * 6);
-}
-
-static int calc_hour_angle(int hour, int minute) {
-  float hm = (float)hour + (float)(minute / 60.0f);
-  return (90 - (int)(hm * 30));
-}
-
-static void update_needle(lv_obj_t *needle, lv_point_precise_t *buf, int angle_deg, int r0, int r1) {
-  lv_obj_t *parent = lv_obj_get_parent(needle);
-  int w = lv_obj_get_width(parent);
-  int h = lv_obj_get_height(parent);
-
-  int cx = w / 2;
-  int cy = h / 2;
-
-  float rad = angle_deg * 0.01745329252f; // PI/180
-
-  // Startpunkt (innerer Radius)
-  buf[0].x = cx + (int)(cosf(rad) * r0);
-  buf[0].y = cy - (int)(sinf(rad) * r0);
-
-  // Endpunkt (äußerer Radius)
-  buf[1].x = cx + (int)(cosf(rad) * r1);
-  buf[1].y = cy - (int)(sinf(rad) * r1);
-
-  lv_line_set_points(needle, buf, 2);
-}
-
-static void calcTempLineLength(float currentTemp, int minTemp, int maxTemp, int padX, int padY, TempLinePosition *out) {
-  /**
-   * Kalkuliert die Linienlänge und gibt die X/Y/Höhe zurück als [3] Array zurück
-   * padding[0] = top, padding[1] = bottom */
-
-  UiContext *ui = &g_ui;
-  if (ui->scaleTemp == nullptr) {
-    return;
-  }
-
-  int h = lv_obj_get_height(ui->scaleTemp);
-  int zP = h + padY;
-
-  if (currentTemp < (float)minTemp)
-    currentTemp = (float)minTemp;
-  if (currentTemp > (float)maxTemp)
-    currentTemp = (float)maxTemp;
-
-  float tempRange = (float)(maxTemp - minTemp);
-  float tempLength = (float)(h / tempRange * (currentTemp - (float)minTemp));
-
-  out->x = padX;
-  out->y = zP;
-  out->length = (int32_t)tempLength;
-
-  UI_DBG("Temp: %3.1f, padX: %d, padY: %d, h: %d, zP: %d, tR:%3.1f, tL:%3.1f, out->L:%d\n", currentTemp, padX, padY, h,
-         zP, tempRange, tempLength, tempRange, tempLength, out->length);
-}
-
-static void updateTemperature(lv_obj_t *tempLine, float tempValue, TempLinePosition *scaleOut) {
-  UiContext *ui = &g_ui;
-
-  int xPadding = scaleOut->x;
-
-  calcTempLineLength(tempValue, TEMP_MIN, TEMP_MAX, xPadding, 0, scaleOut);
-
-  lv_obj_set_size(tempLine, TEMP_LINE_W, scaleOut->length);
-  lv_obj_set_pos(tempLine, scaleOut->x, scaleOut->y - scaleOut->length);
-
-  UI_DBG("scaleOut: X:%d, Y: %d, H: %d\n", scaleOut->x, scaleOut->y, scaleOut->length);
-}
-
 static void countdown_timer_cb(lv_timer_t *t) {
   LV_UNUSED(t);
   UiContext *ui = &g_ui;
 
-  if (!ui->scaleTime || !ui->needleMM || !ui->needleHH) {
-    UI_INFO("[CB] not ready, skip");
+  if (ui->scaleTime == nullptr || ui->needleMM == nullptr || ui->needleHH == nullptr) {
+    UI_INFO("[CB] scale or needles not ready, skip");
     return;
   }
 
-  // --- Countdown finished ---
-  if (ui->countdown_minutes <= 0) {
-    ui->hours = 0;
-    ui->minutes = 0;
+  int w = lv_obj_get_width(ui->scaleTime);
+  int h = lv_obj_get_height(ui->scaleTime);
+  if (w == 0 || h == 0) {
+    UI_INFO("[CB] scale size invalid (%d x %d), skip", w, h);
+    return;
+  }
 
-    update_needle(ui->needleMM, g_minute_hand_points, calc_minute_angle(0), 40, 68);
-    update_needle(ui->needleHH, g_hour_hand_points, calc_hour_angle(0, 0), 40, 60);
+  if (ui->countdown_minutes <= 0) {
+    // Zeiger auf 0 und Timer stoppen
+    lv_scale_set_line_needle_value(ui->scaleTime, ui->needleMM, 60, 0);
+    lv_scale_set_line_needle_value(ui->scaleTime, ui->needleMM, 40, 0);
 
     lv_timer_del(ui->countdown_timer);
     ui->countdown_timer = nullptr;
@@ -216,61 +139,39 @@ static void countdown_timer_cb(lv_timer_t *t) {
     return;
   }
 
-  // --- One minute passed ---
-  ui->countdown_minutes--;
+  ui->countdown_minutes++;
 
-  int angM = calc_minute_angle(ui->minutes);
-  int angH = calc_hour_angle(ui->hours, ui->minutes);
-
-  // Recompute displayed time
-  ui->hours = ui->countdown_minutes / 60;
+  // ui->hours = ui->countdown_minutes / 60;
   ui->minutes = ui->countdown_minutes % 60;
 
-  // Debug (optional)
-  UI_INFO("[CB] remaining=%ld  h=%ld  m=%ld\n", (long)ui->countdown_minutes, (long)ui->hours, (long)ui->minutes);
+  // int32_t hour_pos = (ui->minutes % 12) * 5 + (ui->hours / 12); // 0..59
+  // >>> neue Logik für Hour-Hand <<<
+  // int32_t eff_hour = (ui->minutes == 0) ? ui->hours : (ui->hours + 1); // 1..12
+  // int32_t minutes_elapsed_in_block = (60 - ui->minutes) % 60;          // 0..59
+  // int32_t tick_index = minutes_elapsed_in_block / 12;                  // 0..4
+  // int32_t hour_pos = (eff_hour % 12) * 5 - tick_index;                 // 0..59
+  // if (hour_pos < 0)
+  //   hour_pos += 60;
 
-  // --- Compute Needle Angles ---
-  int angleM = calc_minute_angle(ui->minutes);
-  int angleH = calc_hour_angle(ui->hours, ui->minutes);
+  // UI_INFO("Countdown: %ld min  -> h=%ld m=%ld eff_hour=%ld tick=%ld hour_pos=%ld", (long)ui->countdown_minutes,
+  // (long)h,
+  //         (long)m, (long)eff_hour, (long)tick_index, (long)hour_pos);
 
-  // --- Update both needles ---
+  // UI_INFO("[CB] remaining=%ld  h=%ld  m=%ld  hour_pos=%ld  scale(%d x %d)\n", (long)ui->countdown_minutes,
+  //         (long)ui->hours, (long)ui->minutes, (long)hour_pos, w, h);
+  UI_INFO("[CB] remaining=%ld  h=%ld  m=%ld  scale(%d x %d)\n", (long)ui->countdown_minutes, (long)ui->hours,
+          (long)ui->minutes, w, h);
 
-  update_needle(ui->needleMM, g_minute_hand_points, angleM, 40, 68);
-  update_needle(ui->needleHH, g_hour_hand_points, angleH, 40, 60);
-  static float newTemp = 20.0f;
-  newTemp += 0.5f;
-  if (newTemp > 120.0f)
-    newTemp = 20.0f;
-
-  tempSetPos.x = TEMP_LINE_X_S_PAD;
-  tempSetPos.y = TEMP_Y_START;
-  tempSetPos.length = 0;
-
-  tempCurPos.x = TEMP_LINE_X_C_PAD;
-  tempCurPos.y = TEMP_Y_START;
-  tempCurPos.length = 0;
-
-  updateTemperature(ui->lineTempSet, 100.0, &tempSetPos);
-  updateTemperature(ui->lineTempCur, newTemp, &tempCurPos);
+  // // Minutenzeiger (lange Nadel)
+  lv_scale_set_line_needle_value(ui->scaleTime, ui->needleMM, 60, ui->minutes);
+  // // Stundenzeiger (kürzere Nadel)
+  // lv_scale_set_line_needle_value(ui->scaleTime, ui->needleHH, 40, hour_pos);
 }
 
 void ui_main_screen(UiContext *ui) {
 
   auto mk_scale_needle = [&](uint8_t width, lv_color_t color) -> lv_obj_t * {
     lv_obj_t *line = lv_line_create(ui->scaleTime);
-    lv_obj_set_style_line_width(line, width, 0);
-    lv_obj_set_style_line_rounded(line, true, 0);
-    lv_obj_set_style_line_color(line, color, 0);
-    return line;
-  };
-
-  auto mk_scale_needle_mutable = [&](lv_point_precise_t *pts, uint8_t width, lv_color_t color) -> lv_obj_t * {
-    UiContext *ui = &g_ui;
-    lv_obj_t *line = lv_line_create(ui->screen);
-
-    // WICHTIG: mutable Points setzen, damit lv_scale die Punkte in dieses Array schreibt
-    lv_line_set_points_mutable(line, pts, 2);
-
     lv_obj_set_style_line_width(line, width, 0);
     lv_obj_set_style_line_rounded(line, true, 0);
     lv_obj_set_style_line_color(line, color, 0);
@@ -300,6 +201,32 @@ void ui_main_screen(UiContext *ui) {
   // ------------------------------------------
   // Scale
   // ------------------------------------------
+  // ui->scaleTime = lv_scale_create(ui->screen);
+  // lv_obj_set_size(ui->scaleTime, 170, 170);
+  // lv_obj_center(ui->scaleTime);
+  // lv_obj_set_style_radius(ui->scaleTime, LV_RADIUS_CIRCLE, 0);
+  // lv_obj_set_style_clip_corner(ui->scaleTime, true, 0);
+  // lv_scale_set_mode(ui->scaleTime, LV_SCALE_MODE_ROUND_INNER);
+
+  // // … (alle Styles kommen unverändert hier rein)
+
+  // // Needles
+  // ui->needleMM = lv_line_create(ui->scaleTime);
+  // lv_obj_set_style_line_width(ui->needleMM, 3, 0);
+  // lv_obj_set_style_line_rounded(ui->needleMM, true, 0);
+  // lv_obj_set_style_line_color(ui->needleMM, lv_color_white(), 0);
+
+  // ui->needleHH = lv_line_create(ui->scaleTime);
+  // lv_obj_set_style_line_width(ui->needleHH, 5, 0);
+  // lv_obj_set_style_line_rounded(ui->needleHH, true, 0);
+  // lv_obj_set_style_line_color(ui->needleHH, lv_palette_main(LV_PALETTE_RED), 0);
+
+  // // Initiale Startzeit
+  // ui->countdown_minutes = 4 * 60 + 0;
+  // int32_t h = ui->countdown_minutes / 60;
+  // int32_t m = ui->countdown_minutes % 60;
+  // int32_t hour_pos = (h % 12) * 5 + (m / 12);
+
   ui->scaleTime = lv_scale_create(ui->screen);
   lv_obj_set_size(ui->scaleTime, TIME_SCALE_W, TIME_SCALE_W);
   lv_obj_set_style_radius(ui->scaleTime, LV_RADIUS_CIRCLE, 0);
@@ -346,18 +273,16 @@ void ui_main_screen(UiContext *ui) {
   lv_scale_set_angle_range(ui->scaleTime, 360);
   lv_scale_set_rotation(ui->scaleTime, 270); // 0 = 3Uhr, 90=6Uhr, 180=9Uhr, 270=12Uhr
 
-  // ui->needleMM = mk_scale_needle(3, lv_color_hex(COLOR_ARC_NEEDLE_M));
-  // ui->needleHH = mk_scale_needle(5, lv_color_hex(COLOR_ARC_NEEDLE_H));
-  ui->needleMM = mk_scale_needle_mutable(g_minute_hand_points, 3, lv_color_hex(COLOR_ARC_NEEDLE_M));
-  ui->needleHH = mk_scale_needle_mutable(g_hour_hand_points, 5, lv_color_hex(COLOR_ARC_NEEDLE_H));
+  ui->needleMM = mk_scale_needle(3, lv_color_hex(COLOR_ARC_NEEDLE_M));
+  ui->needleHH = mk_scale_needle(5, lv_color_hex(COLOR_ARC_NEEDLE_H));
 
   ui->countdown_minutes = 4 * 60 + 0;
   ui->hours = ui->countdown_minutes / 60;
   ui->minutes = ui->countdown_minutes % 60;
   int32_t hour_pos = (ui->hours % 12) * 5 + (ui->minutes / 12);
 
-  lv_scale_set_line_needle_value(ui->scaleTime, ui->needleMM, TIME_NEEDLE_LEN_M, ui->minutes);
-  lv_scale_set_line_needle_value(ui->scaleTime, ui->needleHH, TIME_NEEDLE_LEN_H, hour_pos);
+  lv_scale_set_line_needle_value(ui->scaleTime, ui->needleMM, 60, ui->minutes);
+  lv_scale_set_line_needle_value(ui->scaleTime, ui->needleHH, 40, hour_pos);
 
   // ------------------------------------------
   // --- rollerFilament ---
@@ -376,91 +301,6 @@ void ui_main_screen(UiContext *ui) {
   lv_roller_set_options(ui->rollerFilament, "PLA-Basic\nPLA+\nPLA-HS\nPETG\nPETG-HS\nASA\nTPU", LV_ROLLER_MODE_NORMAL);
   // ui_update_filament_options(g_default_preset_id);
 
-  // ------------------------------------------
-  // --- scaleTemp (vertical temperature scale)
-  // ------------------------------------------
-
-  ui->scaleTemp = lv_scale_create(ui->screen);
-  lv_obj_set_size(ui->scaleTemp, 30, 140); // 30px Breite, 140px Höhe
-  lv_obj_set_pos(ui->scaleTemp, 5, 5);     // Links 25px, oben 5px
-  // ==== Style für hellere Tick-Linien und Beschriftung ====
-  lv_color_t white = lv_color_hex(COLOR_TEMP_SET);
-
-  // Hauptlinie der Skala (die vertikale Linie)
-  lv_obj_set_style_line_color(ui->scaleTemp, white, LV_PART_MAIN);
-
-  // Major‑Tick-Linien und deren Beschriftung
-  lv_obj_set_style_line_color(ui->scaleTemp, white, LV_PART_INDICATOR);
-  lv_obj_set_style_text_color(ui->scaleTemp, white, LV_PART_INDICATOR);
-
-  // Minor‑Tick-Linien und deren Beschriftung (falls vorhanden)
-  lv_obj_set_style_line_color(ui->scaleTemp, white, LV_PART_ITEMS);
-  lv_obj_set_style_text_color(ui->scaleTemp, white, LV_PART_ITEMS);
-
-  lv_obj_set_style_pad_left(ui->scaleTemp, 3, LV_PART_INDICATOR);
-  lv_obj_set_style_pad_left(ui->scaleTemp, 3, LV_PART_ITEMS);
-
-  // 13 Schritte: 0,10,20,…,120  – wir zeigen aber nur 20..120 an
-  lv_scale_set_range(ui->scaleTemp, 20, 120); // Default: 0°C bis 120°C
-  lv_scale_set_total_tick_count(ui->scaleTemp, 6);
-  lv_scale_set_major_tick_every(ui->scaleTemp, 1);
-
-  // eigene Label-Liste; die ersten beiden leer
-  static const char *temp_ticks[] = {"20", "40", "60", "80", "100", "120", NULL};
-  lv_scale_set_text_src(ui->scaleTemp, temp_ticks);
-
-  lv_scale_set_mode(ui->scaleTemp, LV_SCALE_MODE_VERTICAL_LEFT); // Vertikal am linken Rand
-  lv_obj_set_style_text_align(ui->scaleTemp, LV_TEXT_ALIGN_LEFT, LV_PART_ITEMS);
-
-  // Innenabstand oben/unten (damit „120“ nicht anstößt)
-  lv_obj_set_style_pad_top(ui->scaleTemp, 5, 0);     // 5 px Platz am oberen Rand
-  lv_obj_set_style_pad_bottom(ui->scaleTemp, 10, 0); // 10 px Platz am unteren Rand
-
-  lv_obj_set_style_bg_opa(ui->scaleTemp, LV_OPA_0, 0); // keine Hintergrundfarbe (transparent)
-
-  // ------------------------------------------
-  // --- SET-Temperatur-Linie ---
-  // ------------------------------------------
-  // Hilfs-Lambda: Erstellt eine Temperatur-Linie rechts der Skala
-  // Lambda zum Erzeugen der Temperatur-Linie (Set/Curr)
-  auto mk_temp_line = [&](lv_color_t color, lv_coord_t x_offset, lv_coord_t y_offset, lv_coord_t init_height,
-                          lv_coord_t width) -> lv_obj_t * {
-    lv_obj_t *line = lv_obj_create(ui->screen);
-    lv_obj_set_size(line, width, init_height);
-
-    // Farbe und Deckkraft
-    lv_obj_set_style_bg_color(line, color, 0);
-    lv_obj_set_style_bg_opa(line, LV_OPA_COVER, 0);
-
-    // Keine Ränder
-    lv_obj_set_style_border_width(line, 0, 0);
-    lv_obj_set_style_radius(line, 0, 0);
-
-    // Position X = Skala-X + Skala-Breite + x_offset
-    lv_coord_t scale_x = lv_obj_get_x(ui->scaleTemp);
-    lv_coord_t scale_w = lv_obj_get_width(ui->scaleTemp);
-    lv_obj_set_x(line, scale_x + scale_w + x_offset);
-
-    // Position Y = Skala-Y + y_offset
-    lv_coord_t scale_y = lv_obj_get_y(ui->scaleTemp);
-    lv_obj_set_y(line, scale_y + y_offset);
-
-    return line;
-  };
-
-  // Temperatur-Linien erzeugen, SOLL(SET) und IST (Actual)
-  int32_t startTemp = 20; // Anfangstemperatur
-  tempSetPos.x = TEMP_LINE_X_S_PAD;
-  tempSetPos.y = TEMP_Y_START;
-  tempSetPos.length = 0;
-  tempCurPos.x = TEMP_LINE_X_C_PAD;
-  tempCurPos.y = TEMP_Y_START;
-  tempCurPos.length = 0;
-
-  ui->lineTempSet = mk_temp_line(lv_color_hex(COLOR_TEMP_SET), TEMP_LINE_X_S_PAD, TEMP_Y_START, TEMP_MIN, TEMP_LINE_W);
-  ui->lineTempCur =
-      mk_temp_line(lv_color_hex(COLOR_TEMP_ACTUAL), TEMP_LINE_X_C_PAD, TEMP_Y_START, TEMP_MIN, TEMP_LINE_W);
-
   // --------------------------------------------
   // --- Focus-Gruppe erzeugen ---
   // --- wird benötigt um den Focus auf bestimmte
@@ -470,10 +310,9 @@ void ui_main_screen(UiContext *ui) {
 
   // Screen laden
   lv_disp_load_scr(ui->screen);
-  update_needle(ui->needleMM, g_minute_hand_points, calc_minute_angle(ui->minutes), 40, 68);
-  update_needle(ui->needleHH, g_hour_hand_points, calc_hour_angle(ui->hours, ui->minutes), 40, 60);
+
   // Timer **jetzt** erzeugen
-  ui->countdown_timer = lv_timer_create(countdown_timer_cb, 1000, NULL); // 1 Minute
+  ui->countdown_timer = lv_timer_create(countdown_timer_cb, 500, NULL);
 }
 
 void ui_init() {

@@ -20,25 +20,19 @@
 #define FILAMENT_W int(COL_W * 1.0)
 #define FILAMENT_H DEFAULT_H
 
-#define TIME_SCALE_W 170
+#define TIME_SCALE_W 160
 #define TIME_SCALE_H TIME_SCALE_W
 #define TIME_SCALE_X 320 - (TIME_SCALE_W / 2) - PADDING
 #define TIME_SCALE_Y FILAMENT_Y + FILAMENT_H + PADDING
+#define TIME_NEEDLE_LEN_M (TIME_SCALE_W / 2) - (TIME_SCALE_W / 100 * 25) // Minuten-Nadel-Länge
+#define TIME_NEEDLE_LEN_H (TIME_SCALE_W / 2) - (TIME_SCALE_W / 100 * 30) // Stunde-Nadel-Länge
 
-#define TIME_SCALE_HHMM_T PADDING + 3
-#define TIME_SCALE_HH_W TIME_SCALE_W - PADDING
-#define TIME_SCALE_MM_W TIME_SCALE_HH_W - PADDING - 2
-#define TIME_NEEDLE_LEN_M 55
-#define TIME_NEEDLE_LEN_H 50
-
-#define TEMPIST_SCALE_X TIME_SCALE_X + TIME_SCALE_W + PADDING
-#define TEMPIST_SCALE_W COL_W * 2
-#define TEMPIST_SCALE_H DEFAULT_H
-
-#define TEMPSOLL_SCALE X TIME_SCALE_X + TIME_SCALE_W + PADDING
-#define TEMPSOLL_SCALE_W TEMPIST_SCALE_W
-#define TEMPSOLL_SCALE_H TEMPIST_SCALE_H
-
+#define TEMP_LINE_W 15
+#define TEMP_LINE_X_S_PAD 37                                        // Abstand der SET-Linie zur Skala
+#define TEMP_LINE_X_C_PAD TEMP_LINE_X_S_PAD + TEMP_LINE_W + PADDING // Abstand der ACTUAL-Linie zur Skala
+#define TEMP_MAX 120
+#define TEMP_MIN 20
+#define TEMP_Y_START 120
 #define H_LINE_X TIME_SCALE_Y + TIME_SCALE_H + PADDING
 
 // ------------------------------------------------------------
@@ -82,10 +76,9 @@ struct UiContext {
 
   // Input- / Buttons
   lv_obj_t *scaleTime = nullptr;
-  lv_obj_t *scaleTime_HH = nullptr;
-  lv_obj_t *scaleTime_MM = nullptr;
-  lv_obj_t *scaleTemp_IST = nullptr;
-  lv_obj_t *scaleTemp_SOLL = nullptr;
+  lv_obj_t *scaleTemp = nullptr;
+  lv_obj_t *lineTempSet = nullptr; // SET-Temperatur
+  lv_obj_t *lineTempCur = nullptr; // ACTUAL-Temperatur
   lv_obj_t *rollerFilament = nullptr;
   lv_obj_t *btnStartStop = nullptr;
   lv_obj_t *needleHH = nullptr;
@@ -108,7 +101,9 @@ struct UiContext {
 };
 
 static UiContext g_ui;
-
+// für beide Zeiger eigene Punkt-Arrays
+static lv_point_precise_t g_minute_hand_points[2];
+static lv_point_precise_t g_hour_hand_points[2];
 enum class UIFocusTarget { None, Time, TempSoll, Filament, StartStop };
 
 void ui_init(void);
