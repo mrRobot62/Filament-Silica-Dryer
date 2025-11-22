@@ -129,23 +129,25 @@ static int calc_hour_angle(int hour, int minute) {
   return (90 - (int)(hm * 30));
 }
 
-static void update_needle(lv_obj_t *needle, lv_point_precise_t *buf, int angle_deg, int r0, int r1) {
+static void update_needle(lv_obj_t *needle, lv_point_precise_t *buf, int angle_deg, int rFrom, int rTo) {
   lv_obj_t *parent = lv_obj_get_parent(needle);
-  int w = lv_obj_get_width(parent);
-  int h = lv_obj_get_height(parent);
+  // int w = lv_obj_get_width(parent);
+  // int h = lv_obj_get_height(parent);
 
-  int cx = w / 2;
-  int cy = h / 2;
+  // int cx = w / 2;
+  // int cy = h / 2;
+  int cy = TIME_POS_Y + (TIME_SCALE_W / 2);
+  int cx = TIME_POS_X + (TIME_SCALE_W / 2);
 
   float rad = angle_deg * 0.01745329252f; // PI/180
 
   // Startpunkt (innerer Radius)
-  buf[0].x = cx + (int)(cosf(rad) * r0);
-  buf[0].y = cy - (int)(sinf(rad) * r0);
+  buf[0].x = cx + (int)(cosf(rad) * rFrom);
+  buf[0].y = cy - (int)(sinf(rad) * rFrom);
 
   // Endpunkt (äußerer Radius)
-  buf[1].x = cx + (int)(cosf(rad) * r1);
-  buf[1].y = cy - (int)(sinf(rad) * r1);
+  buf[1].x = cx + (int)(cosf(rad) * rTo);
+  buf[1].y = cy - (int)(sinf(rad) * rTo);
 
   lv_line_set_points(needle, buf, 2);
 }
@@ -304,7 +306,9 @@ void ui_main_screen(UiContext *ui) {
   lv_obj_set_size(ui->scaleTime, TIME_SCALE_W, TIME_SCALE_W);
   lv_obj_set_style_radius(ui->scaleTime, LV_RADIUS_CIRCLE, 0);
   lv_obj_set_style_clip_corner(ui->scaleTime, true, 0);
-  lv_obj_center(ui->scaleTime);
+  lv_obj_set_pos(ui->scaleTime, TIME_POS_X, TIME_POS_Y);
+
+  // lv_obj_center(ui->scaleTime);
   lv_scale_set_mode(ui->scaleTime, LV_SCALE_MODE_ROUND_INNER);
   lv_obj_set_style_bg_opa(ui->scaleTime, LV_OPA_60, 0);
   lv_obj_set_style_bg_color(ui->scaleTime, /*lv_color_black()*/ lv_color_hex(COLOR_WHITE), 0);
@@ -368,8 +372,11 @@ void ui_main_screen(UiContext *ui) {
   lv_roller_set_selected(ui->rollerFilament, 1, LV_ANIM_OFF);
   lv_obj_set_width(ui->rollerFilament, FILAMENT_W);
   lv_obj_set_height(ui->rollerFilament, FILAMENT_H);
-  // lv_obj_align(ui->rollerFilament, LV_ALIGN_TOP_LEFT, FILAMENT_X, FILAMENT_Y);
-  lv_obj_center(ui->rollerFilament);
+  int x = 160 - (FILAMENT_W / 2);
+  int y = TIME_POS_Y + (TIME_CENTER / 2) - (FILAMENT_H / 2);
+  lv_obj_set_pos(ui->rollerFilament, x, y);
+  // lv_obj_align(ui->rollerFilament, LV_ALIGN_CENTER, x, y);
+  //  lv_obj_center(ui->rollerFilament);
   lv_obj_set_style_bg_color(ui->rollerFilament, lv_color_hex(COLOR_BG), LV_PART_MAIN | LV_STATE_DEFAULT);
   lv_obj_set_style_text_color(ui->rollerFilament, lv_color_hex(COLOR_TEXT), LV_PART_MAIN | LV_STATE_DEFAULT);
   lv_obj_set_style_text_align(ui->rollerFilament, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -419,7 +426,7 @@ void ui_main_screen(UiContext *ui) {
   lv_obj_set_style_bg_opa(ui->scaleTemp, LV_OPA_0, 0); // keine Hintergrundfarbe (transparent)
 
   // ------------------------------------------
-  // --- SET-Temperatur-Linie ---
+  // --- SET-Temperatur-Linie definieren ---
   // ------------------------------------------
   // Hilfs-Lambda: Erstellt eine Temperatur-Linie rechts der Skala
   // Lambda zum Erzeugen der Temperatur-Linie (Set/Curr)
@@ -467,6 +474,16 @@ void ui_main_screen(UiContext *ui) {
   // --- Widgets zu setzen
   // --------------------------------------------
   ui->group = lv_group_get_default();
+  if (!ui->group) {
+    ui->group = lv_group_create();
+    lv_group_set_default(ui->group);
+  }
+  lv_group_add_obj(ui->group, ui->rollerFilament);
+  lv_group_add_obj(ui->group, ui->needleHH);
+  lv_group_add_obj(ui->group, ui->needleMM);
+  lv_group_add_obj(ui->group, ui->lineTempSet);
+
+  lv_group_focus_obj(ui->rollerFilament);
 
   // Screen laden
   lv_disp_load_scr(ui->screen);

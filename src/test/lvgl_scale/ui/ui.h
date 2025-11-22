@@ -20,9 +20,13 @@
 #define FILAMENT_W int(COL_W * 1.0)
 #define FILAMENT_H DEFAULT_H
 
-#define TIME_SCALE_W 160
+#define TIME_SCALE_W 140
+#define TIME_CENTER 140
+#define TIME_POS_Y PADDING
+#define TIME_POS_X 160 - (TIME_SCALE_W / 2)
+
 #define TIME_SCALE_H TIME_SCALE_W
-#define TIME_SCALE_X 320 - (TIME_SCALE_W / 2) - PADDING
+#define TIME_SCALE_X
 #define TIME_SCALE_Y FILAMENT_Y + FILAMENT_H + PADDING
 #define TIME_NEEDLE_LEN_M (TIME_SCALE_W / 2) - (TIME_SCALE_W / 100 * 25) // Minuten-Nadel-Länge
 #define TIME_NEEDLE_LEN_H (TIME_SCALE_W / 2) - (TIME_SCALE_W / 100 * 30) // Stunde-Nadel-Länge
