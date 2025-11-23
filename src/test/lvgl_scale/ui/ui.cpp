@@ -240,7 +240,7 @@ static void countdown_timer_cb(lv_timer_t *t) {
   update_needle(ui->needleMM, g_minute_hand_points, angleM, 40, 68);
   update_needle(ui->needleHH, g_hour_hand_points, angleH, 40, 60);
   static float newTemp = 20.0f;
-  newTemp += 0.5f;
+  newTemp += 0.75f;
   if (newTemp > 120.0f)
     newTemp = 20.0f;
 
