@@ -11,21 +11,11 @@ int thermoCS = MAX6675_CS;
 int thermoCLK = MAX6675_CLK;
 
 MAX6675 thermocouple(thermoCLK, thermoCS, thermoDO);
-int vccPin = 3;
-int gndPin = 2;
-
-// make a cute degree symbol
-uint8_t degree[8] = {140, 146, 146, 140, 128, 128, 128, 128};
 
 void setup() {
-  Serial.begin(9600);
-  // use Arduino pins
-  pinMode(vccPin, OUTPUT);
-  digitalWrite(vccPin, HIGH);
-  pinMode(gndPin, OUTPUT);
-  digitalWrite(gndPin, LOW);
+  Serial.begin(115200);
 
-  UI_INFO("------ MAX6675 test ------");
+  Serial.println("-------- MAX6675 test ---------");
   // wait for MAX chip to stabilize
   delay(500);
 }
@@ -33,8 +23,9 @@ void setup() {
 void loop() {
   // basic readout test, just print the current temp
 
-  // go to line #1
-  (thermocouple.readCelsius());
+  Serial.print("C° = ");
+  Serial.println(thermocouple.readCelsius());
 
+  // For the MAX6675 to update, you must delay AT LEAST 250ms between reads!
   delay(1000);
 }

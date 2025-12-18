@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"name": "Filament-Dryer",
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"*.simql": "simql",
+			"regex": "cpp",
+			"numbers": "cpp",
+			"*.cpp_20251109": "cpp",
+			"*.20251108": "cpp",
+			"*.cpp_20251110": "cpp",
+			"array": "cpp",
+			"*.cpp_20251123": "cpp"
+		}
+	}
+}

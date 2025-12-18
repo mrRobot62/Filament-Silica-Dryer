@@ -78,6 +78,49 @@ void initFilamentPresets() {
   g_presets[g_presetCount++] = FilamentPreset("Spec-WOOD-Composite", 45.0f, 5, 0, false); // aus WOOD / Composite
 }
 
+// ------------------------------------------------------------------------------
+// style-focus elemente
+// Roller: ausgewählte Option im Fokus blau, sonst weiß
+// ------------------------------------------------------------------------------
+static void style_focus_filament(lv_obj_t *roller) {
+  // Standardfarbe für text
+  lv_obj_set_style_text_color(roller, lv_color_hex(0xF9FAFB), LV_PART_SELECTED | LV_STATE_DEFAULT);
+
+  // Fokus Text blau (optional)
+  // lv_obj_set_style_text_color(roller, lv_palette_main(LV_PALETTE_BLUE), LV_PART_SELECTED | LV_STATE_FOCUSED);
+
+  // --- Roter Fokusrahmen ---
+  lv_obj_set_style_outline_width(roller, 3, LV_PART_MAIN | LV_STATE_FOCUSED);
+  lv_obj_set_style_outline_color(roller, lv_palette_main(LV_PALETTE_RED), LV_PART_MAIN | LV_STATE_FOCUSED);
+  lv_obj_set_style_outline_opa(roller, LV_OPA_COVER, LV_PART_MAIN | LV_STATE_FOCUSED);
+
+  // Kein Rahmen im Normalzustand
+  lv_obj_set_style_outline_width(roller, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+}
+
+// Buttons: Hintergrund im Fokus blau, Text weiß
+static void style_focus_button(lv_obj_t *btn, lv_color_t bg_default, lv_color_t bg_focuslv) {
+  // Default
+  lv_obj_set_style_bg_color(btn, bg_default, LV_PART_MAIN | LV_STATE_DEFAULT);
+  lv_obj_set_style_text_color(btn, lv_color_hex(0xF9FAFB), LV_PART_MAIN | LV_STATE_DEFAULT);
+
+  // Fokus
+  lv_obj_set_style_bg_color(btn, lv_color_hex(COLOR_BG), LV_PART_MAIN | LV_STATE_FOCUSED);
+  lv_obj_set_style_text_color(btn, lv_color_hex(0x374151), LV_PART_MAIN | LV_STATE_FOCUSED);
+}
+
+// needles
+static void style_focus_needles(lv_obj_t *needle) {
+  // Standardfarbe für needles
+  lv_obj_set_style_line_color(needle, lv_color_hex(0x00FFA6), LV_PART_MAIN | LV_STATE_DEFAULT);
+  lv_obj_set_style_bg_color(needle, lv_color_hex(COLOR_BG), LV_PART_MAIN | LV_STATE_DEFAULT);
+  lv_obj_set_style_border_color(needle, lv_color_hex(COLOR_RED), LV_PART_MAIN | LV_STATE_DEFAULT);
+  // Fokus Line gelb (optional)
+  lv_obj_set_style_line_color(needle, lv_color_hex(COLOR_YELLOW), LV_PART_MAIN | LV_STATE_FOCUSED);
+}
+
+// ------------------------------------------------------------------------------
+
 void ui_update_filament_options(uint8_t defaultID) {
   initFilamentPresets();
 
@@ -300,6 +343,18 @@ void ui_main_screen(UiContext *ui) {
   // To use custom font size, enable a font in lv_conf.h and apply it here.
 
   // ------------------------------------------
+  // Button
+  // ------------------------------------------
+  ui->btnStartStop = lv_btn_create(ui->screen);
+  ui->lblStartStop = lv_label_create(ui->btnStartStop);
+  lv_label_set_text(ui->lblStartStop, "START");
+  lv_obj_center(ui->lblStartStop);
+  lv_obj_set_width(ui->btnStartStop, BTN_W);
+  lv_obj_set_height(ui->btnStartStop, BTN_H);
+
+  lv_obj_add_event_cb(ui->btnStartStop, on_click_btnStartStop, LV_EVENT_CLICKED, NULL);
+
+  // ------------------------------------------
   // Scale
   // ------------------------------------------
   ui->scaleTime = lv_scale_create(ui->screen);
@@ -478,12 +533,16 @@ void ui_main_screen(UiContext *ui) {
     ui->group = lv_group_create();
     lv_group_set_default(ui->group);
   }
+  lv_group_add_obj(ui->group, ui->btnStartStop);
   lv_group_add_obj(ui->group, ui->rollerFilament);
   lv_group_add_obj(ui->group, ui->needleHH);
   lv_group_add_obj(ui->group, ui->needleMM);
   lv_group_add_obj(ui->group, ui->lineTempSet);
 
   lv_group_focus_obj(ui->rollerFilament);
+
+  style_focus_filament(ui->rollerFilament);
+  style_focus_button(ui->btnStartStop, lv_color_hex(COLOR_GREEN), lv_color_hex(COLOR_YELLOW));
 
   // Screen laden
   lv_disp_load_scr(ui->screen);

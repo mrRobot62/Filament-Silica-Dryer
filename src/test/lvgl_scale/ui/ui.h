@@ -1,6 +1,6 @@
 #pragma once
-#include "../logging/log_ui.h"
-#include "../pins.h"
+#include "logging/log_ui.h"
+#include "pins.h"
 #include <lvgl.h>
 
 // ------------------------------------------------------------
@@ -38,6 +38,11 @@
 #define TEMP_MIN 20
 #define TEMP_Y_START 120
 #define H_LINE_X TIME_SCALE_Y + TIME_SCALE_H + PADDING
+
+#define BTN_W 50
+#define BTN_H 25
+#define BTN_X 260
+#define BTN_Y PADDING
 
 // ------------------------------------------------------------
 // Fonts (müssen in lv_conf.h aktiviert sein)
@@ -84,9 +89,11 @@ struct UiContext {
   lv_obj_t *lineTempSet = nullptr; // SET-Temperatur
   lv_obj_t *lineTempCur = nullptr; // ACTUAL-Temperatur
   lv_obj_t *rollerFilament = nullptr;
-  lv_obj_t *btnStartStop = nullptr;
   lv_obj_t *needleHH = nullptr;
   lv_obj_t *needleMM = nullptr;
+
+  lv_obj_t *btnStartStop = nullptr;
+  lv_obj_t *lblStartStop = nullptr;
 
   // LEDs zur Anzeige von Status
   lv_obj_t *ledFan230V = nullptr;

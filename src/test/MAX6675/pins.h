@@ -33,10 +33,10 @@
 #define ROTARY_LATCH_MODE RotaryEncoder::LatchMode::FOUR3
 
 // --- Temperature sensor (Adafruit MAX6675) ---
-#define MAX6675_CS 41 // 7
+#define MAX6675_CS 40 // 7
 // #define MAX31856_DI 40 // 8
-#define MAX6675_DO 40  // 9
-#define MAX6675_CLK 39 // 15
+#define MAX6675_DO 39  // 9
+#define MAX6675_CLK 41 // 15
 
 // --- Fan / Heater / Lamp control (placeholders) ---
 #define PIN_FAN_12V 16
